@@ -41,7 +41,7 @@ def main():
     # Define same parameters for both tests
     n_samples = 1_000_000  # 1M samples for both
     
-    print("Sample size: {:,} per method".format(n_samples))
+    print("Sample size: {} per method".format(n_samples))
     print("Expected runtime: ~3-5 minutes per method")
     print()
     

@@ -1,104 +1,73 @@
 """
-Named scenario presets.
+Named scenario presets for what-if analysis.
 
-Pre-defined states for common situations.
-Quick reference without manual state construction.
+These presets provide quick access to predefined state configurations,
+making the tool immediately more useful for settlement negotiations
+and client presentations.
+
+Version: 1.0
 """
 
 from typing import Dict
 
 
-# Preset scenarios for common situations
 PRESETS = {
-    'baseline': {
-        'SV1a': 0.38,
-        'SV1b': 0.86,
-        'SV1c': 0.75
+    "baseline": {
+        "name": "Baseline - Current Case",
+        "state": {"SV1a": 0.38, "SV1b": 0.86, "SV1c": 0.75},
+        "description": "Current case inputs - reference baseline for comparison"
     },
-    'strong_position': {
-        'SV1a': 0.85,
-        'SV1b': 0.90,
-        'SV1c': 0.80
+    
+    "authority_collapse": {
+        "name": "Authority Defect Confirmed",
+        "state": {"SV1a": 0.15, "SV1b": 0.86, "SV1c": 0.75},
+        "description": "HMCTS audit reveals definitive authority defects (catastrophic)"
     },
-    'weak_position': {
-        'SV1a': 0.25,
-        'SV1b': 0.30,
-        'SV1c': 0.35
+    
+    "procedural_win": {
+        "name": "Procedural Arguments Succeed",
+        "state": {"SV1a": 0.38, "SV1b": 0.95, "SV1c": 0.75},
+        "description": "Court accepts procedural leverage arguments"
     },
-    'balanced_dispute': {
-        'SV1a': 0.50,
-        'SV1b': 0.50,
-        'SV1c': 0.50
+    
+    "cost_spike": {
+        "name": "Cost Asymmetry Spike",
+        "state": {"SV1a": 0.38, "SV1b": 0.86, "SV1c": 0.95},
+        "description": "Defendant costs escalate, indemnity costs likely"
     },
-    'procedural_advantage_only': {
-        'SV1a': 0.40,
-        'SV1b': 0.95,
-        'SV1c': 0.45
-    },
-    'claim_validity_only': {
-        'SV1a': 0.95,
-        'SV1b': 0.40,
-        'SV1c': 0.45
-    },
-    'cost_advantage_only': {
-        'SV1a': 0.40,
-        'SV1b': 0.45,
-        'SV1c': 0.95
+    
+    "nuclear": {
+        "name": "Everything Goes Wrong",
+        "state": {"SV1a": 0.15, "SV1b": 0.20, "SV1c": 0.25},
+        "description": "Worst-case across all vectors (authority+procedure+costs)"
     }
 }
 
 
-def get_preset(name: str) -> Dict[str, float]:
+def get_preset(name: str) -> dict:
     """
-    Retrieve a named preset scenario.
+    Load a named scenario preset.
     
     Args:
-        name: Name of the preset (e.g., 'baseline', 'strong_position')
+        name: Name of the preset to load
     
     Returns:
-        Dictionary with SV1a, SV1b, SV1c values
+        Dictionary containing name, state, and description
     
     Raises:
-        KeyError: If preset name not found
+        ValueError: If preset name is not defined
     """
     if name not in PRESETS:
-        available = ', '.join(sorted(PRESETS.keys()))
-        raise KeyError(
-            f"Preset '{name}' not found. Available presets: {available}"
-        )
+        raise ValueError(f"Unknown preset: {name}. Valid presets: {list_presets()}")
     
-    return PRESETS[name].copy()
+    return PRESETS[name]
 
 
-def list_presets() -> list:
+def list_presets() -> list[str]:
     """
-    Get list of available preset names.
+    List all available scenario presets.
     
     Returns:
         List of preset names
     """
-    return sorted(PRESETS.keys())
-
-
-def create_custom_preset(name: str, sv1a: float, sv1b: float, sv1c: float) -> None:
-    """
-    Create a new custom preset.
-    
-    Args:
-        name: Name for the new preset
-        sv1a: SV1a value
-        sv1b: SV1b value
-        sv1c: SV1c value
-    
-    Raises:
-        ValueError: If any value is outside [0.0, 1.0]
-    """
-    for var_name, value in [("SV1a", sv1a), ("SV1b", sv1b), ("SV1c", sv1c)]:
-        if not 0.0 <= value <= 1.0:
-            raise ValueError(f"{var_name} must be in [0.0, 1.0], got {value}")
-    
-    PRESETS[name] = {
-        'SV1a': sv1a,
-        'SV1b': sv1b,
-        'SV1c': sv1c
-    }
+    return list(PRESETS.keys())
