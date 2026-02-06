@@ -1,7 +1,7 @@
 """
 Unified Procedural Leverage Score (UPLS) calculation.
 
-This file contains the ONLY place where UPLS and tripwire are calculated.
+This file contains ONLY place where UPLS and tripwire are calculated.
 No imports from anywhere else in the project.
 No logging, no printing, no I/O.
 Deterministic outputs only.
@@ -10,9 +10,10 @@ If this file changes, the economics changed.
 """
 
 from typing import Tuple, Dict
+from .weights import get_weights
 
 
-def calculate_upls(sv1a: float, sv1b: float, sv1c: float) -> float:
+def calculate_upls(sv1a: float, sv1b: float, sv1c: float, weights: Dict[str, float] = None) -> float:
     """
     Calculate Unified Procedural Leverage Score (UPLS).
     
@@ -25,6 +26,7 @@ def calculate_upls(sv1a: float, sv1b: float, sv1c: float) -> float:
         sv1a: Success vector 1a (claim validity), range [0.0, 1.0]
         sv1b: Success vector 1b (procedural advantage), range [0.0, 1.0]
         sv1c: Success vector 1c (cost asymmetry), range [0.0, 1.0]
+        weights: Optional dictionary of SV weights (default: 0.40, 0.35, 0.25)
     
     Returns:
         UPLS score in range [0.0, 1.0]
@@ -32,6 +34,10 @@ def calculate_upls(sv1a: float, sv1b: float, sv1c: float) -> float:
     Raises:
         ValueError: If any input is outside [0.0, 1.0]
     """
+    # Get weights (use defaults if not provided)
+    if weights is None:
+        weights = get_weights("default")
+    
     # Validate inputs
     for name, value in [("SV1a", sv1a), ("SV1b", sv1b), ("SV1c", sv1c)]:
         if not 0.0 <= value <= 1.0:
@@ -39,16 +45,16 @@ def calculate_upls(sv1a: float, sv1b: float, sv1c: float) -> float:
     
     # Weighted composite calculation
     # Weights reflect relative importance in procedural leverage
-    weight_a = 0.40  # Claim validity is most critical
-    weight_b = 0.35  # Procedural advantage is significant
-    weight_c = 0.25  # Cost asymmetry supports but doesn't dominate
+    weight_a = weights["sv1a"]
+    weight_b = weights["sv1b"]
+    weight_c = weights["sv1c"]
     
     upls = (weight_a * sv1a) + (weight_b * sv1b) + (weight_c * sv1c)
     
     return round(upls, 3)
 
 
-def calculate_tripwire(upls: float, base_multiplier: float = 10.0) -> float:
+def calculate_tripwire(upls: float, base_multiplier: float = 10.0, weights: Dict[str, float] = None) -> float:
     """
     Calculate tripwire score for leverage threshold assessment.
     
@@ -57,6 +63,7 @@ def calculate_tripwire(upls: float, base_multiplier: float = 10.0) -> float:
     Args:
         upls: Unified Procedural Leverage Score, range [0.0, 1.0]
         base_multiplier: Scaling factor (default 10.0)
+        weights: Optional dictionary of SV weights (not used)
     
     Returns:
         Tripwire score, typically in range [0.0, 10.0]

@@ -22,11 +22,10 @@ from typing import Dict, Optional
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from engine.state import get_current_state
+from engine.state import get_current_state, load_state
 from engine.scoring import calculate_comprehensive_score
 from engine.evaluation import get_risk_assessment
 from engine.interpretation import format_summary, get_full_interpretation
-
 
 VERSION = "1.0"
 
@@ -106,7 +105,7 @@ Output Schema (JSON mode):
     "interpretation": {"leverage_position": "...", "decision_explanation": "...", "tripwire_status": "...", "confidence_explanation": "..."},
     "version": "1.0"
   }
-        """
+"""
     )
     
     parser.add_argument(
