@@ -147,7 +147,8 @@ def main():
     print("-" * 60)
     
     print("1. Authority Tail Risk (SV1a Beta(5.5, 9.0)):")
-    print("   → P(5th percentile UPLS < 0.50) = {result.decision_proportions.get('REJECT', 0):.3%}")
+    reject_pct = result.decision_proportions.get('REJECT', 0.0) * 100
+    print(f"   → P(5th percentile UPLS < 0.50) = {reject_pct:.3f}%")
     print("   → Catastrophic authority failure drives near-zero percent of decisions")
     print("   → If SV1a hits 5th percentile of 0.50, you REJECT")
     print("   → LEFT TAIL IS THE KILLER - not rare edge case")
