@@ -121,6 +121,40 @@ class TriangularDistribution(Distribution):
         )
 
 
+class TruncatedNormalDistribution(Distribution):
+    """Truncated Normal distribution with specified bounds."""
+    
+    def __init__(self, mean: float, std: float, min_val: float, max_val: float):
+        """
+        Initialize truncated normal distribution.
+        
+        Args:
+            mean: Mean of underlying normal distribution
+            std: Standard deviation of underlying normal distribution
+            min_val: Lower bound (inclusive)
+            max_val: Upper bound (inclusive)
+        """
+        self.mean = mean
+        self.std = std
+        self.min_val = min_val
+        self.max_val = max_val
+    
+    def sample(self, n: int) -> np.ndarray:
+        """
+        Sample from truncated normal distribution.
+        
+        Uses rejection sampling to enforce bounds.
+        """
+        samples = []
+        while len(samples) < n:
+            # Sample from normal
+            s = np.random.normal(self.mean, self.std)
+            # Accept if within bounds
+            if self.min_val <= s <= self.max_val:
+                samples.append(s)
+        return np.array(samples)
+
+
 def monte_carlo_sample(
     n_samples: int,
     sv1a_dist: Distribution,
