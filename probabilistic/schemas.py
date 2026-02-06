@@ -9,7 +9,7 @@ Critical Design Principle:
     They do not import from /engine.
 """
 
-from typing import Dict
+from typing import Dict, Any
 from pydantic import BaseModel, Field, validator
 
 
@@ -86,11 +86,12 @@ class DeterministicOutput(BaseModel):
 class MonteCarloResult(BaseModel):
     """Result from Monte Carlo sampling (probabilistic layer)."""
     
-    meta: Dict[str, any] = Field(..., description="Metadata (n_samples, method)")
+    meta: Dict[str, Any] = Field(..., description="Metadata (n_samples, method)")
     distributions: Dict[str, Dict[str, float]] = Field(..., description="SV distribution parameters")
     decision_frequencies: Dict[str, int] = Field(..., description="Decision frequency counts")
     decision_proportions: Dict[str, float] = Field(..., description="Decision probability estimates")
     tripwire_distribution: Dict[str, float] = Field(..., description="Tripwire distribution statistics")
+    upls_distribution: Dict[str, float] = Field(..., description="UPLS distribution statistics")
     
     class Config:
         extra = 'allow'
