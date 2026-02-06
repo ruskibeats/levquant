@@ -139,7 +139,98 @@ Test coverage:
 
 Total: 74 tests
 
-## Project Structure
+## Probabilistic Extensions
+
+The `/probabilistic` directory provides uncertainty quantification and scenario exploration on top of the deterministic core engine. It does not modify or replace the core engine—it consumes it via JSON output or the `run_engine()` function.
+
+**Critical Design Principle**: NEVER import from `/engine` directly. Always consume via CLI JSON output or `run_engine()` function.
+
+### What It Does
+
+The probabilistic layer provides:
+- **Uncertainty quantification** (Monte Carlo distributions)
+- **Scenario exploration** (stress testing, what-if analysis)
+- **Posterior updates** (Bayesian learning from outcomes, optional)
+
+These are **orthogonal concerns** to the deterministic engine. The deterministic engine provides leverage posture and decision recommendations. The probabilistic layer quantifies uncertainty around those estimates.
+
+### Architecture Boundary
+
+**Allowed**:
+- Consume CLI JSON output via `probabilistic/adapters.py`
+- Call `run_engine()` from CLI layer
+- Use Pydantic schemas to validate JSON contracts
+
+**Forbidden**:
+- Import from `/engine` directly
+- Modify deterministic math or thresholds
+- Mix probabilistic and deterministic logic in same file
+
+### Usage Examples
+
+**Monte Carlo Sampling** (quantify uncertainty):
+```python
+from probabilistic.monte_carlo import NormalDistribution, monte_carlo_sample
+from probabilistic.adapters import run_deterministic_engine
+
+# Define distributions for SV parameters
+sv1a_dist = NormalDistribution(mean=0.38, std=0.05)
+sv1b_dist = NormalDistribution(mean=0.86, std=0.03)
+sv1c_dist = NormalDistribution(mean=0.75, std=0.08)
+
+# Sample 10,000 scenarios
+result = monte_carlo_sample(
+    n_samples=10000,
+    sv1a_dist=sv1a_dist,
+    sv1b_dist=sv1b_dist,
+    sv1c_dist=sv1c_dist
+)
+
+# Access decision proportions
+print(result.decision_proportions)
+# {'ACCEPT': 0.23, 'COUNTER': 0.45, 'HOLD': 0.27, 'REJECT': 0.05}
+```
+
+**Stress Scenarios** (what-if analysis):
+```python
+from probabilistic.scenarios import run_scenario
+
+# Run predefined stress test
+result = run_scenario('cost_spike')
+print(result.scenario_name)  # 'cost_spike'
+print(result.output.evaluation.decision)  # 'HOLD'
+print(result.description)  # 'Maximum cost asymmetry - worst-case cost exposure'
+```
+
+**Custom Scenarios** (tailored what-ifs):
+```python
+from probabilistic.scenarios import run_custom_scenario
+
+result = run_custom_scenario(
+    scenario_name='aggressive_offer',
+    sv1a=0.7,
+    sv1b=0.9,
+    sv1c=0.4,
+    description='Opponent makes aggressive offer'
+)
+print(result.output.evaluation.decision)  # 'ACCEPT' (or appropriate decision)
+```
+
+### Non-Goals (Probabilistic Layer)
+
+The probabilistic extensions do not:
+- Replace the deterministic engine
+- Modify `/engine` in any way
+- Predict judicial outcomes (liability, quantum)
+- Model opponent psychology or negotiation tactics
+- Provide probability-of-success estimates
+
+They exist solely to:
+- Quantify uncertainty around deterministic leverage estimates
+- Explore scenario space systematically
+- Provide structured output for higher-order decision systems
+
+### Directory Structure
 
 ```
 procedural_leverage_engine/
@@ -154,12 +245,30 @@ procedural_leverage_engine/
 │   └── presets.py          # named scenarios
 ├── cli/
 │   └── run.py              # command-line entry point
+├── probabilistic/            # v2.0-skeleton (structure only, not implemented)
+│   ├── README.md             # architecture doc (NEVER import /engine)
+│   ├── __init__.py           # validation helper
+│   ├── schemas.py            # Pydantic JSON models
+│   ├── adapters.py           # CLI wrapper
+│   ├── monte_carlo.py        # SV sampling (skeleton)
+│   ├── scenarios.py           # named presets
+│   └── tests/
+│       ├── __init__.py
+│       ├── test_monte_carlo.py  # distribution tests
+│       └── test_scenarios.py    # preset validation
 └── tests/
     ├── test_scoring.py     # output locks
     ├── test_evaluation.py  # evaluation tests
     ├── test_interpretation.py  # interpretation tests
     └── test_cli.py         # CLI tests
 ```
+
+### Safety Guarantees
+
+- **Zero Core Pollution**: Probabilistic code never imports from `/engine`
+- **Rollback Safe**: Delete `/probabilistic` and core engine still works
+- **Test Independence**: Probabilistic tests don't run core tests
+- **Blame Clear**: Bugs are in probabilistic code, not deterministic
 
 ## Important Notes
 
