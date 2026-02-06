@@ -19,15 +19,15 @@ def interpret_upls_range(upls: float) -> str:
         Human-readable description of leverage position (posture, not outcome)
     """
     if upls < 0.30:
-        return "Low procedural leverage - weak positioning"
+        return "Low procedural leverage - limited positioning"
     elif upls < 0.50:
-        return "Limited leverage - defensive posture required"
+        return "Limited procedural leverage - defensive posture"
     elif upls < 0.70:
-        return "Moderate leverage - routine dispute parameters"
+        return "Moderate procedural leverage - routine dispute parameters"
     elif upls < 0.85:
-        return "Strong leverage - favorable negotiating position"
+        return "Strong procedural leverage - advantageous negotiating posture"
     else:
-        return "Very high procedural leverage - upper-bound positioning"
+        return "Very high procedural leverage - upper-bound leverage posture"
 
 
 def interpret_decision(decision: str) -> str:
@@ -69,11 +69,11 @@ def interpret_tripwire(tripwire: float) -> str:
         Human-readable description of tripwire status (assessment, not prediction)
     """
     if tripwire < 5.0:
-        return "Safe zone - no immediate procedural concerns"
+        return "Safe zone - no immediate procedural escalation indicated"
     elif tripwire < 7.5:
-        return "Caution zone - monitor for changes"
+        return "Caution zone - monitor for procedural changes"
     else:
-        return "Critical zone - tripwire triggered, elevated attention required"
+        return "Critical zone - tripwire triggered, elevated procedural attention required"
 
 
 def interpret_confidence(confidence: str) -> str:
@@ -155,7 +155,7 @@ def format_summary(state: Dict, scores: Dict, risk_assessment: Dict) -> str:
         f"  Tripwire Triggered: {'Yes' if risk_assessment.get('tripwire_triggered') else 'No'}",
         "",
         "INTERPRETATION:",
-        f"  {interpret_upls_range(scores.get('upls', 0))}",
+        f"  {interpret_upls_range(scores.get('upls')) if isinstance(scores.get('upls'), (int, float)) else 'UPLS unavailable'}",
         "",
         "=" * 60
     ]

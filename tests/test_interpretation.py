@@ -26,32 +26,32 @@ class TestUPLSRangeInterpretation:
     
     def test_low_leverage_interpretation(self):
         """Test interpretation for low leverage (< 0.30)."""
-        assert interpret_upls_range(0.29) == "Low procedural leverage - weak positioning"
-        assert interpret_upls_range(0.00) == "Low procedural leverage - weak positioning"
+        assert interpret_upls_range(0.29) == "Low procedural leverage - limited positioning"
+        assert interpret_upls_range(0.00) == "Low procedural leverage - limited positioning"
         
     def test_limited_leverage_interpretation(self):
         """Test interpretation for limited leverage (0.30 to 0.50)."""
-        assert interpret_upls_range(0.30) == "Limited leverage - defensive posture required"
-        assert interpret_upls_range(0.40) == "Limited leverage - defensive posture required"
-        assert interpret_upls_range(0.49) == "Limited leverage - defensive posture required"
+        assert interpret_upls_range(0.30) == "Limited procedural leverage - defensive posture"
+        assert interpret_upls_range(0.40) == "Limited procedural leverage - defensive posture"
+        assert interpret_upls_range(0.49) == "Limited procedural leverage - defensive posture"
         
     def test_moderate_leverage_interpretation(self):
         """Test interpretation for moderate leverage (0.50 to 0.70)."""
-        assert interpret_upls_range(0.50) == "Moderate leverage - routine dispute parameters"
-        assert interpret_upls_range(0.60) == "Moderate leverage - routine dispute parameters"
-        assert interpret_upls_range(0.69) == "Moderate leverage - routine dispute parameters"
+        assert interpret_upls_range(0.50) == "Moderate procedural leverage - routine dispute parameters"
+        assert interpret_upls_range(0.60) == "Moderate procedural leverage - routine dispute parameters"
+        assert interpret_upls_range(0.69) == "Moderate procedural leverage - routine dispute parameters"
         
     def test_strong_leverage_interpretation(self):
         """Test interpretation for strong leverage (0.70 to 0.85)."""
-        assert interpret_upls_range(0.70) == "Strong leverage - favorable negotiating position"
-        assert interpret_upls_range(0.77) == "Strong leverage - favorable negotiating position"
-        assert interpret_upls_range(0.84) == "Strong leverage - favorable negotiating position"
+        assert interpret_upls_range(0.70) == "Strong procedural leverage - advantageous negotiating posture"
+        assert interpret_upls_range(0.77) == "Strong procedural leverage - advantageous negotiating posture"
+        assert interpret_upls_range(0.84) == "Strong procedural leverage - advantageous negotiating posture"
         
     def test_very_high_leverage_interpretation(self):
         """Test interpretation for very high leverage (>= 0.85)."""
-        assert interpret_upls_range(0.85) == "Very high procedural leverage - upper-bound positioning"
-        assert interpret_upls_range(0.90) == "Very high procedural leverage - upper-bound positioning"
-        assert interpret_upls_range(1.00) == "Very high procedural leverage - upper-bound positioning"
+        assert interpret_upls_range(0.85) == "Very high procedural leverage - upper-bound leverage posture"
+        assert interpret_upls_range(0.90) == "Very high procedural leverage - upper-bound leverage posture"
+        assert interpret_upls_range(1.00) == "Very high procedural leverage - upper-bound leverage posture"
         
     def test_language_is_posture_based(self):
         """Verify language describes posture, not outcomes."""
@@ -131,27 +131,27 @@ class TestTripwireInterpretation:
     
     def test_safe_zone(self):
         """Test safe zone interpretation."""
-        assert interpret_tripwire(4.9) == "Safe zone - no immediate procedural concerns"
-        assert interpret_tripwire(0.0) == "Safe zone - no immediate procedural concerns"
+        assert interpret_tripwire(4.9) == "Safe zone - no immediate procedural escalation indicated"
+        assert interpret_tripwire(0.0) == "Safe zone - no immediate procedural escalation indicated"
         
     def test_caution_zone(self):
         """Test caution zone interpretation."""
-        assert interpret_tripwire(5.0) == "Caution zone - monitor for changes"
-        assert interpret_tripwire(6.0) == "Caution zone - monitor for changes"
-        assert interpret_tripwire(7.4) == "Caution zone - monitor for changes"
+        assert interpret_tripwire(5.0) == "Caution zone - monitor for procedural changes"
+        assert interpret_tripwire(6.0) == "Caution zone - monitor for procedural changes"
+        assert interpret_tripwire(7.4) == "Caution zone - monitor for procedural changes"
         
     def test_critical_zone(self):
         """Test critical zone interpretation."""
-        assert interpret_tripwire(7.5) == "Critical zone - tripwire triggered, elevated attention required"
-        assert interpret_tripwire(8.0) == "Critical zone - tripwire triggered, elevated attention required"
-        assert interpret_tripwire(10.0) == "Critical zone - tripwire triggered, elevated attention required"
+        assert interpret_tripwire(7.5) == "Critical zone - tripwire triggered, elevated procedural attention required"
+        assert interpret_tripwire(8.0) == "Critical zone - tripwire triggered, elevated procedural attention required"
+        assert interpret_tripwire(10.0) == "Critical zone - tripwire triggered, elevated procedural attention required"
         
     def test_language_is_assessment_based(self):
         """Verify language is assessment-based, not prediction-based."""
         critical = interpret_tripwire(8.0)
         
-        # Should use "elevated attention" (assessment)
-        assert "elevated attention" in critical
+        # Should use "elevated procedural attention" (assessment)
+        assert "elevated procedural attention" in critical
         
         # Should NOT use predictive language like "heightened risk"
         assert "heightened risk" not in critical
@@ -236,9 +236,9 @@ class TestFullInterpretation:
         """Test that full interpretation computes correct values."""
         result = get_full_interpretation(0.641, 6.41, "HOLD", "Moderate")
         
-        assert result['leverage_position'] == "Moderate leverage - routine dispute parameters"
+        assert result['leverage_position'] == "Moderate procedural leverage - routine dispute parameters"
         assert result['decision_explanation'] == "Model indicates maintaining position is appropriate given current leverage posture."
-        assert result['tripwire_status'] == "Caution zone - monitor for changes"
+        assert result['tripwire_status'] == "Caution zone - monitor for procedural changes"
         assert result['confidence_explanation'] == "Model indicates moderate confidence in current leverage assessment."
 
 

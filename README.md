@@ -36,7 +36,7 @@ It exists solely to impose disciplined structure on settlement leverage assessme
 
 ## How to Run
 
-### Basic Execution
+### Basic Execution (Human-Readable Output)
 
 ```bash
 cd procedural_leverage_engine
@@ -49,14 +49,95 @@ This will:
 3. Generate a decision recommendation
 4. Print a formatted summary to stdout
 
+Example output:
+```
+============================================================
+PROCEDURAL LEVERAGE ENGINE - CASE ANALYSIS
+============================================================
+
+INPUTS:
+  SV1a (Claim Validity): 0.38
+  SV1b (Procedural Advantage): 0.86
+  SV1c (Cost Asymmetry): 0.75
+
+SCORES:
+  UPLS: 0.641
+  Tripwire: 6.41
+
+DECISION:
+  Action: HOLD
+  Confidence: Moderate
+  Tripwire Triggered: No
+
+INTERPRETATION:
+  Moderate procedural leverage - routine dispute parameters
+
+============================================================
+```
+
+### JSON Output (Machine-Readable)
+
+```bash
+cd procedural_leverage_engine
+python -m cli.run --json
+# or
+python -m cli.run -j
+```
+
+This outputs a deterministic JSON schema for automation, pipelines, and integrations:
+
+```json
+{
+  "inputs": {
+    "SV1a": 0.38,
+    "SV1b": 0.86,
+    "SV1c": 0.75
+  },
+  "scores": {
+    "upls": 0.641,
+    "tripwire": 6.41
+  },
+  "evaluation": {
+    "decision": "HOLD",
+    "confidence": "Moderate",
+    "tripwire_triggered": false,
+    "upls_value": 0.641,
+    "tripwire_value": 6.41
+  },
+  "interpretation": {
+    "leverage_position": "Moderate procedural leverage - routine dispute parameters",
+    "decision_explanation": "Model indicates maintaining position is appropriate given current leverage posture.",
+    "tripwire_status": "Caution zone - monitor for procedural changes",
+    "confidence_explanation": "Model indicates moderate confidence in current leverage assessment."
+  },
+  "version": "1.0"
+}
+```
+
+### Command-Line Help
+
+```bash
+python -m cli.run --help
+```
+
+This displays usage information and available flags.
+
 ### Running Tests
 
 ```bash
 cd procedural_leverage_engine
-python -m pytest tests/test_scoring.py -v
+python -m pytest tests/ -v
 ```
 
-The test suite locks the scoring outputs. If tests fail, the economics have changed and require explicit review.
+The test suite locks all core outputs (scoring, evaluation, interpretation, CLI). If tests fail, the economics or contracts have changed and require explicit review.
+
+Test coverage:
+- `tests/test_scoring.py` - 7 tests (baseline outputs)
+- `tests/test_evaluation.py` - 26 tests (thresholds, confidence, tripwire)
+- `tests/test_interpretation.py` - 30 tests (language, contracts, formatting)
+- `tests/test_cli.py` - 11 tests (human/JSON modes, schema validation)
+
+Total: 74 tests
 
 ## Project Structure
 
@@ -74,7 +155,10 @@ procedural_leverage_engine/
 ├── cli/
 │   └── run.py              # command-line entry point
 └── tests/
-    └── test_scoring.py     # output locks
+    ├── test_scoring.py     # output locks
+    ├── test_evaluation.py  # evaluation tests
+    ├── test_interpretation.py  # interpretation tests
+    └── test_cli.py         # CLI tests
 ```
 
 ## Important Notes
@@ -82,7 +166,7 @@ procedural_leverage_engine/
 - **`engine/scoring.py` is version-locked**: Changes here modify the economics and require test updates.
 - **State is explicit**: Current inputs are in `engine/state.py`, not in external files.
 - **No I/O in scoring**: The math functions are pure and deterministic.
-- **Tests are locks**: `test_scoring.py` prevents unintended changes to calculations.
+- **Tests are locks**: All test files prevent unintended changes to calculations and contracts.
 
 ## Design Principles
 
