@@ -1,0 +1,67 @@
+[project]
+name = "procedural-leverage-engine"
+version = "1.2.0"
+description = "Deterministic procedural leverage engine for commercial dispute settlement decision support"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Procedural Leverage Engine Contributors"}
+]
+keywords = ["procedural leverage", "dispute settlement", "decision support", "monte carlo", "uncertainty quantification"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Legal Industry",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "pydantic>=2.0.0",
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+ple = "cli.run:main"
+
+[project.urls]
+Homepage = "https://github.com/ruskibeats/levquant"
+Documentation = "https://github.com/ruskibeats/levquant#readme"
+Repository = "https://github.com/ruskibeats/levquant"
+Issues = "https://github.com/ruskibeats/levquant/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+python_classes = ["Test*"]
+addopts = "-v --tb=short"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "N", "W", "B", "C4", "UP"]
+ignore = []
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]

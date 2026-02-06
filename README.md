@@ -1,10 +1,38 @@
 # Procedural Leverage Engine
 
+[![CI](https://github.com/ruskibeats/levquant/workflows/CI/badge.svg)](https://github.com/ruskibeats/levquant/actions)
+
 This project computes a Unified Procedural Leverage Score (UPLS) to support internal decision-making in commercial dispute settlement negotiations.
 
 It is a deterministic, scenario-driven model intended as a decision aid, not a decision-maker.
 
 **UPLS Definition**: UPLS is a scalar in the range [0.0, 1.0] representing the weighted aggregate of procedural, conduct, and cost leverage factors, intended to approximate relative settlement pressure rather than probability of success.
+
+## Installation
+
+### From Source
+
+```bash
+cd procedural_leverage_engine
+pip install -e .
+```
+
+This installs the `ple` command-line tool:
+
+```bash
+ple  # equivalent to python -m cli.run
+ple --json  # JSON output
+```
+
+### Development Installation
+
+```bash
+cd procedural_leverage_engine
+pip install -e ".[dev]"
+```
+
+This includes pytest, black, and ruff for development and testing.
+ +++++++ REPLACE
 
 ## What It Does
 
