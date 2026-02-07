@@ -1,0 +1,13 @@
+scenario_name,SV1a,SV1b,SV1c,engine_decision,engine_confidence,UPLS,FEAR_INDEX,settlement_posture,active_kill_switches,short_explanation
+baseline_control,0.38,0.86,0.75,HOLD,Moderate,0.641,0.0,NORMAL,,FEAR_INDEX 0.00 below override thresholds; retain engine=HOLD.
+procedural_softening,0.38,0.76,0.75,HOLD,Moderate,0.605,0.0,NORMAL,,FEAR_INDEX 0.00 below override thresholds; retain engine=HOLD.
+insurer_notice,0.38,0.86,0.75,HOLD,Moderate,0.641,0.85,URGENT,insurer_notified_of_fraud,FEAR_INDEX 0.85 >= 0.75; urgent settlement overlay on engine=HOLD.
+reserving_rights,0.38,0.86,0.75,HOLD,Moderate,0.641,0.8,URGENT,insurer_reserves_rights,FEAR_INDEX 0.80 >= 0.75; urgent settlement overlay on engine=HOLD.
+regulatory_open,0.38,0.82,0.75,HOLD,Moderate,0.627,0.9,FORCE,sra_investigation_open,FEAR_INDEX 0.90 >= 0.90; force settlement despite engine=HOLD.
+metadata_validated,0.42,0.82,0.75,HOLD,Moderate,0.642,0.88,URGENT,police_metadata_validated,FEAR_INDEX 0.88 >= 0.75; urgent settlement overlay on engine=HOLD.
+override_admitted,0.35,0.8,0.75,HOLD,Moderate,0.607,0.92,FORCE,administrative_override_admitted,FEAR_INDEX 0.92 >= 0.90; force settlement despite engine=HOLD.
+shadow_director,0.35,0.78,0.75,HOLD,Moderate,0.6,0.78,URGENT,shadow_director_established,FEAR_INDEX 0.78 >= 0.75; urgent settlement overlay on engine=HOLD.
+nullity_confirmed,0.32,0.76,0.75,HOLD,Moderate,0.581,1.0,FORCE,defence_nullity_confirmed,FEAR_INDEX 1.00 >= 0.90; force settlement despite engine=HOLD.
+compound_insurer_regulator,0.35,0.78,0.75,HOLD,Moderate,0.6,0.9,FORCE,"insurer_notified_of_fraud,sra_investigation_open",FEAR_INDEX 0.90 >= 0.90; force settlement despite engine=HOLD.
+compound_highest_fear,0.3,0.72,0.75,HOLD,Moderate,0.559,1.0,FORCE,"defence_nullity_confirmed,insurer_reserves_rights,administrative_override_admitted",FEAR_INDEX 1.00 >= 0.90; force settlement despite engine=HOLD.
+economic_stress_no_switch,0.28,0.64,0.6,COUNTER,Low,0.486,0.0,NORMAL,,FEAR_INDEX 0.00 below override thresholds; retain engine=COUNTER.

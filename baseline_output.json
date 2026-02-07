@@ -1,0 +1,25 @@
+{
+  "inputs": {
+    "SV1a": 0.38,
+    "SV1b": 0.86,
+    "SV1c": 0.75
+  },
+  "scores": {
+    "upls": 0.641,
+    "tripwire": 6.41
+  },
+  "evaluation": {
+    "decision": "HOLD",
+    "confidence": "Moderate",
+    "tripwire_triggered": false,
+    "upls_value": 0.641,
+    "tripwire_value": 6.41
+  },
+  "interpretation": {
+    "leverage_position": "Moderate procedural leverage - routine dispute parameters",
+    "decision_explanation": "Model indicates maintaining position is appropriate given current leverage posture.",
+    "tripwire_status": "Caution zone - monitor for procedural changes",
+    "confidence_explanation": "Model indicates moderate confidence in current leverage assessment."
+  },
+  "version": "1.0"
+}

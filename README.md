@@ -167,6 +167,29 @@ Test coverage:
 
 Total: 74 tests
 
+## Grid Sweep
+
+Run a deterministic SV terrain sweep across a fixed 495-point grid:
+
+```bash
+cd procedural_leverage_engine
+python run_sv_grid_sweep.py
+```
+
+This generates:
+
+- `outputs/grid/grid_all.csv`
+- `outputs/grid/grid_sv1c_0.45.csv` ... `grid_sv1c_0.95.csv`
+- `outputs/grid/plots/heatmap_upls_sv1c_<value>.png`
+- `outputs/grid/plots/heatmap_decision_sv1c_<value>.png`
+
+The script also prints:
+
+- total grid points
+- decision counts per SV1c slice
+- min/max/mean UPLS per slice
+- detected 4-neighbour decision cliff transitions
+
 ## Probabilistic Extensions
 
 The `/probabilistic` directory provides uncertainty quantification and scenario exploration on top of the deterministic core engine. It does not modify or replace the core engine—it consumes it via JSON output or the `run_engine()` function.

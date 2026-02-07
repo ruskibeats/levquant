@@ -78,9 +78,7 @@ def main():
     if st.sidebar.button("Calculate", type="primary"):
         # Run engine
         result = run_deterministic_engine(
-            sv1a=sv1a,
-            sv1b=sv1b,
-            sv1c=sv1c
+            state={"SV1a": sv1a, "SV1b": sv1b, "SV1c": sv1c}
         )
         
         # Display results
