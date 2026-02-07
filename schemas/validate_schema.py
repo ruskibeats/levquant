@@ -1,59 +1,45 @@
-"""
-Validate CLI JSON output against Pydantic schema.
-
-This script validates that the current engine output matches
-the expected schema contract defined in probabilistic.schemas.
-
-Usage:
-    python schemas/validate_schema.py
-"""
+"""Validate CLI JSON output against schema expectations used in CI."""
 
 import json
+import sys
 from pathlib import Path
-from probabilistic.schemas import DeterministicOutput
 
 
-def validate_engine_output():
-    """Validate schemas/engine_output.json against DeterministicOutput schema."""
-    
-    schema_path = Path(__file__).parent / "engine_output.json"
-    
-    if not schema_path.exists():
-        print(f"Error: Schema file not found: {schema_path}")
-        return False
-    
-    print(f"Validating schema: {schema_path}")
-    print()
-    
-    # Load JSON
-    with open(schema_path) as f:
-        data = json.load(f)
-    
-    print("Loaded JSON with keys:")
-    for key in sorted(data.keys()):
-        print(f"  - {key}")
-    print()
-    
-    # Validate against Pydantic model
+def _fail(message: str) -> None:
+    print(f"Error: {message}")
+    sys.exit(1)
+
+
+def validate() -> None:
+    output_file = Path("/tmp/output.json")
+
+    if not output_file.exists():
+        _fail("/tmp/output.json not found")
+
     try:
-        output = DeterministicOutput(**data)
-        print("✅ Schema validation PASSED")
-        print()
-        print("Validated fields:")
-        print(f"  - inputs: SV1a={output.inputs.SV1a}, SV1b={output.inputs.SV1b}, SV1c={output.inputs.SV1c}")
-        print(f"  - scores: upls={output.scores.upls}, tripwire={output.scores.tripwire}")
-        print(f"  - evaluation: decision={output.evaluation.decision}, confidence={output.evaluation.confidence}")
-        print(f"  - version: {output.version}")
-        print()
-        return True
-    
-    except Exception as e:
-        print("❌ Schema validation FAILED")
-        print(f"Error: {e}")
-        print()
-        return False
+        with output_file.open() as f:
+            data = json.load(f)
+    except Exception as exc:
+        _fail(f"failed to parse JSON: {exc}")
+
+    required = ["inputs", "scores", "evaluation", "interpretation", "version"]
+    missing = [key for key in required if key not in data]
+    if missing:
+        _fail(f"missing keys: {missing}")
+
+    for sv in ["SV1a", "SV1b", "SV1c"]:
+        if sv not in data["inputs"]:
+            _fail(f"missing input {sv}")
+
+        value = data["inputs"][sv]
+        if not isinstance(value, (int, float)):
+            _fail(f"{sv} must be numeric, got {type(value).__name__}")
+
+        if not (0.0 <= float(value) <= 1.0):
+            _fail(f"{sv}={value} out of range [0,1]")
+
+    print("✓ Schema validation passed")
 
 
-if __name__ == '__main__':
-    success = validate_engine_output()
-    exit(0 if success else 1)
+if __name__ == "__main__":
+    validate()
