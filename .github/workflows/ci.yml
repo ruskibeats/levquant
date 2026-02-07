@@ -24,8 +24,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pydantic numpy pytest pytest-cov
-        pip install black ruff
+        pip install -r requirements.txt
     
     - name: Run tests
       run: |
@@ -62,7 +61,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pydantic numpy
+        pip install -r requirements.txt
     
     - name: Update schema on push to main
       run: |
