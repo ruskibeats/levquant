@@ -22,6 +22,8 @@ from typing import Dict, Optional
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from ai_assistant.context_journal import add_context, get_all_context
+from ai_assistant.daily_calibration import DailyAICalibrator, export_prompt_markdown, save_daily_report
 from engine.state import get_current_state, load_state
 from engine.scoring import calculate_comprehensive_score
 from engine.evaluation import get_risk_assessment
@@ -74,6 +76,80 @@ def run_engine(state: Optional[Dict] = None) -> Dict:
     }
 
 
+def cmd_daily_ai(args) -> int:
+    """Execute the daily-ai command: save context and generate calibration prompt."""
+    # Import here to avoid circular import at module load time
+    from decision_support.monetary import ASSUMPTIONS
+
+    try:
+        # Add new context to journal
+        add_context(
+            doc_text=args.text,
+            entry_type=args.entry_type,
+            source="cli",
+        )
+        print(f"✓ Context saved to journal (type: {args.entry_type})")
+
+        # Get all context (with optional limit)
+        all_context = get_all_context(limit=args.limit if args.limit > 0 else None)
+
+        # Get engine snapshot with current SV values
+        engine_result = run_engine(state={
+            "SV1a": args.sv1a,
+            "SV1b": args.sv1b,
+            "SV1c": args.sv1c,
+        })
+
+        # Build assumptions snapshot
+        assumptions_snapshot = {
+            **ASSUMPTIONS,
+            "current_posture": "NORMAL",  # Default; CLI uses simplified posture
+            "fear_index": 0.0,
+            "kill_switches_active": [],
+        }
+
+        # Build and run calibration
+        calibrator = DailyAICalibrator(llm_client=None)
+        result = calibrator.run(
+            new_context=args.text,
+            all_context=all_context,
+            engine_snapshot=engine_result,
+            assumptions_snapshot=assumptions_snapshot,
+        )
+
+        # Save report
+        outputs_dir = Path(__file__).parent.parent / "outputs"
+        report_path = save_daily_report(result, outputs_dir=outputs_dir)
+        print(f"✓ Report saved: {report_path}")
+
+        # Optionally export prompt as markdown
+        if args.export_md:
+            md_path = export_prompt_markdown(result["raw_prompt"], outputs_dir=outputs_dir)
+            print(f"✓ Prompt exported: {md_path}")
+
+        # Print prompt to stdout
+        if args.print_prompt:
+            print("\n" + "=" * 60)
+            print("GENERATED NOTEBOOKLM PROMPT")
+            print("=" * 60)
+            print(result["raw_prompt"])
+            print("=" * 60)
+
+        # Print summary
+        print("\nCalibration Summary:")
+        print(f"  Date: {result['date']}")
+        print(f"  New context length: {len(args.text)} chars")
+        print(f"  Total context entries: {len(all_context.split('---')) if all_context else 0}")
+        print(f"  Engine UPLS: {engine_result['scores']['upls']:.3f}")
+        print(f"  Engine Tripwire: {engine_result['scores']['tripwire']:.2f}")
+
+        return 0
+
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 1
+
+
 def main(argv: Optional[list] = None) -> int:
     """
     Main CLI entry point.
@@ -93,9 +169,13 @@ def main(argv: Optional[list] = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python -m cli.run              # Human-readable output (default)
-  python -m cli.run --json       # Machine-readable JSON output
-  python -m cli.run -j           # Short form for JSON mode
+  python -m cli.run                    # Run engine (default)
+  python -m cli.run --json             # Machine-readable JSON output
+  python -m cli.run daily-ai --text "New email from HMRC..."
+
+Commands:
+  (no command)    Run the leverage engine
+  daily-ai        Save context and generate NotebookLM calibration prompt
 
 Output Schema (JSON mode):
   {
@@ -114,10 +194,69 @@ Output Schema (JSON mode):
         help='Output in JSON format (machine-readable)'
     )
     
+    # Subcommands
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    
+    # daily-ai subcommand
+    daily_ai_parser = subparsers.add_parser(
+        'daily-ai',
+        help='Save context and generate NotebookLM calibration prompt',
+        description='Add new context to the journal and generate a calibration prompt for NotebookLM.'
+    )
+    daily_ai_parser.add_argument(
+        '--text', '-t',
+        required=True,
+        help='New context text to add (e.g., email content, court note)'
+    )
+    daily_ai_parser.add_argument(
+        '--entry-type', '-e',
+        default='text',
+        choices=['text', 'email', 'court_note', 'phone_call', 'other'],
+        help='Type of context entry (default: text)'
+    )
+    daily_ai_parser.add_argument(
+        '--sv1a',
+        type=float,
+        default=0.5,
+        help='SV1a value (Right to Bring the Claim) for engine snapshot (default: 0.5)'
+    )
+    daily_ai_parser.add_argument(
+        '--sv1b',
+        type=float,
+        default=0.5,
+        help='SV1b value (Rule-Breaking Leverage) for engine snapshot (default: 0.5)'
+    )
+    daily_ai_parser.add_argument(
+        '--sv1c',
+        type=float,
+        default=0.5,
+        help='SV1c value (Cost Pressure on Them) for engine snapshot (default: 0.5)'
+    )
+    daily_ai_parser.add_argument(
+        '--limit', '-l',
+        type=int,
+        default=0,
+        help='Limit context entries (0 = all, default: 0)'
+    )
+    daily_ai_parser.add_argument(
+        '--export-md', '-m',
+        action='store_true',
+        help='Also export prompt as Markdown file'
+    )
+    daily_ai_parser.add_argument(
+        '--print-prompt', '-p',
+        action='store_true',
+        help='Print generated prompt to stdout'
+    )
+    
     args = parser.parse_args(argv)
     
+    # Route to appropriate command
+    if args.command == 'daily-ai':
+        return cmd_daily_ai(args)
+    
+    # Default: run engine
     try:
-        # Run engine
         result = run_engine()
         
         # Output

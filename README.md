@@ -32,7 +32,42 @@ pip install -e ".[dev]"
 ```
 
 This includes pytest, black, and ruff for development and testing.
- +++++++ REPLACE
+
+## Decision Support Dashboard (Production Analytical Layer)
+
+Run the dashboard:
+
+```bash
+cd procedural_leverage_engine
+streamlit run web/dashboard.py
+```
+
+Architecture boundary:
+
+- `engine/` = deterministic scoring truth (unchanged)
+- `decision_support/` = monetary translation, scenarios, validation, audit metadata
+- `web/` = presentation layer (Streamlit + Plotly)
+
+### Evidence Exports
+
+From the dashboard Export panel you can:
+
+- Export full run JSON (engine + pricing + assumptions + audit hash)
+- Export court-safe PDF summary
+- Save scenario matrix to:
+  - `outputs/pricing_matrix.json`
+  - `outputs/pricing_matrix.csv`
+
+### Pricing Assumptions Disclaimer
+
+GBP corridor outputs are **decision-support assumptions**, not legal valuation facts.
+They are deterministic transforms of:
+
+1. Engine outputs (`UPLS`, `decision`, `tripwire`) via `cli.run.run_engine(...)`
+2. Explicit monetary inputs and switch toggles
+3. Published multipliers shown in the Assumptions & Audit panel
+
+No commercial assumption is embedded in `/engine`.
 
 ## What It Does
 
@@ -335,3 +370,111 @@ procedural_leverage_engine/
 3. **State is explicit** – no hidden globals
 4. **Readable > clever** – this is decision support, not a Kaggle entry
 5. **One responsibility per file**
+
+## Daily AI Assistant (Calibration)
+
+The Daily AI Assistant helps you maintain calibration of the leverage model by accumulating context over time and generating NotebookLM-ready prompts for systematic review.
+
+### What It Does
+
+- **Context Journal**: Append-only file-based storage (`daily_context.json`) of all case updates, emails, court notes, and timeline changes
+- **Prompt Generation**: Creates structured calibration prompts for NotebookLM that include:
+  - Full accumulated context (all prior entries)
+  - Current deterministic engine snapshot
+  - Explicit assumptions audit
+  - Calibration questionnaire (fact validation, drift detection, pressure level review, settlement corridor sanity check)
+  - Required JSON output schema
+
+### How to Use
+
+#### Dashboard (Recommended)
+
+Run the dashboard and scroll to the **Daily AI (Calibration)** panel:
+
+```bash
+cd procedural_leverage_engine
+streamlit run web/dashboard.py
+```
+
+In the panel:
+1. Paste new context (emails, notes, updates) in the text area
+2. Select entry type (text/email/court_note/phone_call/other)
+3. Click **Save to Journal** to append with timestamp
+4. Click **Generate NotebookLM Prompt** to build the calibration prompt
+5. Copy the generated prompt and paste into NotebookLM
+6. Review the LLM's structured JSON output for drift detection and calibration recommendations
+
+#### CLI (Headless)
+
+Add context and generate prompt from command line:
+
+```bash
+# Add context and generate prompt
+python -m cli.run daily-ai \
+  --text "New email from opposing counsel received..." \
+  --entry-type email \
+  --sv1a 0.6 --sv1b 0.7 --sv1c 0.5 \
+  --export-md --print-prompt
+```
+
+Options:
+- `--text, -t`: New context text (required)
+- `--entry-type, -e`: Type of entry (text/email/court_note/phone_call/other)
+- `--sv1a/--sv1b/--sv1c`: Current SV values for engine snapshot
+- `--limit, -l`: Limit context entries (0 = all)
+- `--export-md, -m`: Also export prompt as Markdown file
+- `--print-prompt, -p`: Print generated prompt to stdout
+
+### Output Structure
+
+The calibration prompt generates JSON structured output including:
+
+```json
+{
+  "timestamp_utc": "2024-01-15T10:30:00",
+  "model_version": "LEVQUANT_CALIBRATION_TEMPLATE_v1.0",
+  "lexicon_used": true,
+  "engine_snapshot": { ... },
+  "assumptions_audit": {
+    "assumptions_light_or_heavy": "light|mixed|heavy",
+    "top_5_load_bearing_assumptions": [...]
+  },
+  "fact_checks": [
+    {"id": "F1", "claim": "...", "status": "INFERRED", "probability": 0.7, ...}
+  ],
+  "drift_detection": {
+    "drift_score": 0.3,
+    "where_drift_detected": [...],
+    "required_corrections": [...]
+  },
+  "tripwire_calibration": {
+    "pressure_level_expected": 7,
+    "pressure_level_actual": 6.5,
+    "explain_in_plain_english": "..."
+  },
+  "settlement_corridor_check": {
+    "anchor_gbp": 15000000,
+    "minimum_objective_gbp": 9000000,
+    "corridor_alignment": "aligned",
+    "why": "..."
+  },
+  "insurer_logic": {
+    "fastest_scare_fact": "...",
+    "reserve_rights_triggers": [...]
+  },
+  "daily_actions": {
+    "what_to_update_in_inputs": [...],
+    "what_to_leave_unchanged": [...],
+    "what_to_watch_next": [...]
+  }
+}
+```
+
+### Design Principles
+
+- **No vector store**: Simple append-only JSON file, no embeddings or retrieval
+- **No external API calls by default**: Generates prompts for manual copy-paste into NotebookLM
+- **Court-safe language**: Prompt instructs LLM to use "alleged", "inferred", "supported by evidence" — never absolute claims
+- **Deterministic engine consumption**: Uses `cli.run.run_engine()` for engine snapshots, never imports from `/engine` directly
+- **Full context**: All journal entries included in prompt (no summarization) for complete audit trail
+
