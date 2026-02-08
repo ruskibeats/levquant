@@ -437,6 +437,47 @@ test_score_changes_with_toggles         # UI visibly changes
 
 ---
 
+## Epistemological Confidence Framework
+
+LEVQUANT does not deal in absolutes. Every output is attached to a confidence interval derived from evidentiary quality:
+
+| Confidence Level | Evidentiary Standard | Implication |
+|------------------|----------------------|-------------|
+| **CERTAINTY (1.0)** | Blockchain/Immutable Log | Fact cannot be disputed (e.g., SAR Log) |
+| **HIGH (0.8-0.9)** | Forensic Metadata | Difficult to rebut without expert fraud |
+| **MODERATE (0.5-0.7)** | Witness Statement | Subject to cross-examination |
+| **LOW (<0.5)** | Uncorroborated Assertion | Treated as noise/speculation |
+
+*Note: The engine automatically downgrades leverage scores if the underlying evidentiary standard drops below HIGH.*
+
+---
+
+## The 'Iniquity' Protocol (Insurance Voidance Risk)
+
+The system continuously monitors for patterns triggering standard Professional Indemnity "Iniquity Exclusions" (dishonesty/fraud clauses).
+
+**Trigger Thresholds:**
+1. **Procedural Irregularity:** Risk Score > 50 (Reservation of Rights likely)
+2. **Metadata Contradiction:** Risk Score > 75 (Coverage investigation active)
+3. **Statutory Breach (s.173 DPA):** Risk Score > 90 (Policy Voidance Risk)
+
+*Disclaimer: This module models insurer behavior based on standard market wordings. It does not analyze specific policy documents.*
+
+---
+
+## Risk Topology & Contagion Modeling
+
+LEVQUANT models risk not as isolated silos, but as a contagion network.
+
+**Propagation Vectors:**
+- **SRA Finding** → Automatic FCA Notification (COLP/COFA duties)
+- **DPA Section 173 Breach** → Automatic ICO Reportability
+- **Dishonesty Finding** → Solvency II "Operational Risk" Capital Surcharge
+
+*The system flags "Contagion Nodes" where a single settlement failure cascades into multi-regulator exposure.*
+
+---
+
 ## Court-Safe Language
 
 This system uses only court-safe, non-advocacy language:
