@@ -233,6 +233,28 @@ print(summary["what_moves_up"])       # Next band requirements
 
 ---
 
+## The 'Containment' Principle (The Golden Bridge)
+
+The system logic is built on a core principle: **Settlement is the only verified mechanism to sever contagion vectors.**
+
+A top negotiator always builds a Golden Bridge for the opponent to retreat across. This framework frames settlement not as "losing," but as "buying a firewall."
+
+| State | Risk Nodes | Status |
+|-------|-----------|--------|
+| **Pre-Settlement** | SRA, ICO, FCA | Active and propagating |
+| **Post-Settlement** | Settlement Agreement | Firewall deployed — all nodes dormant |
+
+*The Settlement Agreement acts as a cryptographic "Firewall," formally de-escalating all active risk nodes to "Dormant."*
+
+**Why this works:**
+- It frames paying as "purchasing risk de-escalation" not "admitting fraud"
+- It gives opponents a rational, face-saving reason to settle
+- The dashboard visualizes this as a "Risk De-escalation Path"
+
+*The system doesn't just threaten — it provides the only escape route.*
+
+---
+
 ## Forensic Deep Dive Modules
 
 ### 1. Truth Decay (probabilistic/bayesian.py)
