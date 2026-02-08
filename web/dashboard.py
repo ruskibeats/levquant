@@ -37,6 +37,7 @@ from decision_support.scenario_pricer import (
 )
 from decision_support.schemas import KillSwitchInputs, MonetaryInputs, ProceduralInputs
 from web.components.assumptions_panel import render_assumptions_panel
+from web.components.contagion_map import render_contagion_panel
 from web.components.corridor_panel import render_corridor_panel
 from web.components.heatmap_panel import render_heatmap_panel
 from web.components.kpi_panel import render_kpi_panel
@@ -502,6 +503,10 @@ def main() -> None:
 
     render_kpi_panel(priced)
     render_corridor_panel(priced)
+
+    # Contagion Map Panel (NEW)
+    st.markdown("---")
+    render_contagion_panel(kill.model_dump())
 
     st.subheader("How the settlement figure is built")
     breakdown_df = pd.DataFrame([b.model_dump() for b in priced["breakdown"]])
