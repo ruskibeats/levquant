@@ -1,12 +1,93 @@
-# Procedural Leverage Engine
+# Procedural Leverage Engine (LEVQUANT)
 
 [![CI](https://github.com/ruskibeats/levquant/workflows/CI/badge.svg)](https://github.com/ruskibeats/levquant/actions)
 
-This project computes a Unified Procedural Leverage Score (UPLS) to support internal decision-making in commercial dispute settlement negotiations.
+**Deterministic decision-support framework for commercial dispute settlement negotiations.**
 
-It is a deterministic, scenario-driven model intended as a decision aid, not a decision-maker.
+This project computes a Unified Procedural Leverage Score (UPLS) and provides comprehensive risk analytics for settlement strategy. It is designed as a decision aid—not a decision-maker—and uses only court-safe, auditable language throughout.
 
-**UPLS Definition**: UPLS is a scalar in the range [0.0, 1.0] representing the weighted aggregate of procedural, conduct, and cost leverage factors, intended to approximate relative settlement pressure rather than probability of success.
+---
+
+## Quick Start
+
+```bash
+# Install
+cd procedural_leverage_engine
+pip install -e .
+
+# Run CLI
+ple --help
+
+# Run Dashboard
+streamlit run web/dashboard.py
+```
+
+---
+
+## What This System Does
+
+LEVQUANT provides **deterministic, auditable decision support** for settlement negotiations through four integrated layers:
+
+### 1. Core Engine (Deterministic Scoring)
+- **UPLS**: Unified Procedural Leverage Score [0.0, 1.0]
+- **Three Input Vectors**:
+  - SV1a: Claim validity strength
+  - SV1b: Procedural advantage
+  - SV1c: Cost asymmetry
+- **Decision Outputs**: ACCEPT, COUNTER, HOLD, REJECT
+
+### 2. Settlement Bands (Event-Driven Pricing)
+- **BASE**: £2.5m–£4m (0 flags) — Present-day, evidence-only value
+- **VALIDATION**: £5m–£9m (1 validation flag) — After external validation event
+- **TAIL**: £12m–£15m (≥2 tail flags) — Existential containment pricing
+
+### 3. Forensic Deep Dive (Risk Indicators)
+- **Truth Decay**: Time-based evidence strength inference
+- **GDPR Forensics**: Data integrity/iniquity risk indicators
+- **Insurance Shadow Reserve**: Locked capital estimation
+
+### 4. Daily AI Assistant (Calibration)
+- Context journal with UTC timestamps
+- NotebookLM-ready prompt generation
+- Drift detection and fact validation
+
+---
+
+## Architecture
+
+```
+procedural_leverage_engine/
+├── engine/                    # Core deterministic scoring (immutable)
+│   ├── scoring.py            # UPLS math
+│   ├── evaluation.py         # Decision logic
+│   └── interpretation.py     # Human-readable labels
+│
+├── decision_support/          # Risk analytics (outside engine)
+│   ├── settlement_bands.py   # Three-band settlement framework
+│   ├── insurance_reserve.py  # Reserve pressure analysis
+│   ├── gdpr_liability.py     # GDPR exposure quantification
+│   ├── gdpr_forensics.py     # Data integrity risk indicators
+│   └── insurance_shadow.py   # Shadow reserve/dead money
+│
+├── probabilistic/             # Inference models (outside engine)
+│   └── bayesian.py           # Truth decay model
+│
+├── ai_assistant/              # Daily calibration
+│   ├── context_journal.py    # Append-only context storage
+│   └── daily_calibration.py  # Prompt generation
+│
+├── web/                       # Streamlit dashboard
+│   └── dashboard.py
+│
+├── cli/                       # Command-line interface
+│   └── run.py
+│
+└── tests/                     # Comprehensive test suite
+```
+
+**Critical Constraint**: No code in `decision_support/`, `probabilistic/`, or `ai_assistant/` imports from `engine/` directly. All engine access via `cli.run.run_engine()`.
+
+---
 
 ## Installation
 
@@ -20,97 +101,31 @@ pip install -e .
 This installs the `ple` command-line tool:
 
 ```bash
-ple  # equivalent to python -m cli.run
-ple --json  # JSON output
+ple --help                    # Show usage
+ple --json                    # JSON output
+ple calibrate                 # Run calibration probe
+ple daily-ai --text "..."     # Add to context journal
 ```
 
 ### Development Installation
 
 ```bash
-cd procedural_leverage_engine
 pip install -e ".[dev]"
 ```
 
-This includes pytest, black, and ruff for development and testing.
+Includes pytest, black, and ruff.
 
-## Decision Support Dashboard (Production Analytical Layer)
+---
 
-Run the dashboard:
+## Usage
 
-```bash
-cd procedural_leverage_engine
-streamlit run web/dashboard.py
-```
+### Command Line
 
-Architecture boundary:
-
-- `engine/` = deterministic scoring truth (unchanged)
-- `decision_support/` = monetary translation, scenarios, validation, audit metadata
-- `web/` = presentation layer (Streamlit + Plotly)
-
-### Evidence Exports
-
-From the dashboard Export panel you can:
-
-- Export full run JSON (engine + pricing + assumptions + audit hash)
-- Export court-safe PDF summary
-- Save scenario matrix to:
-  - `outputs/pricing_matrix.json`
-  - `outputs/pricing_matrix.csv`
-
-### Pricing Assumptions Disclaimer
-
-GBP corridor outputs are **decision-support assumptions**, not legal valuation facts.
-They are deterministic transforms of:
-
-1. Engine outputs (`UPLS`, `decision`, `tripwire`) via `cli.run.run_engine(...)`
-2. Explicit monetary inputs and switch toggles
-3. Published multipliers shown in the Assumptions & Audit panel
-
-No commercial assumption is embedded in `/engine`.
-
-## What It Does
-
-The engine calculates procedural leverage scores based on three key vectors:
-
-- **SV1a**: Claim validity strength (0.0 to 1.0)
-- **SV1b**: Procedural advantage (0.0 to 1.0)
-- **SV1c**: Cost asymmetry (0.0 to 1.0)
-
-These inputs are combined into a single UPLS score using weighted formulas, which is then used to determine recommended actions (ACCEPT, COUNTER, REJECT, or HOLD).
-
-## Assumptions
-
-1. **Deterministic Model**: All inputs produce the same outputs. No probabilistic elements.
-2. **Bounded Inputs**: All SV values must be in the range [0.0, 1.0].
-3. **Weighted Importance**: These weights are fixed by design to reflect a baseline commercial-litigation risk profile. Claim validity (40%), procedural advantage (35%), and cost asymmetry (25%) constitute the core weighting. Alternative weightings may be explored via scenario sweeps, but the core engine remains invariant.
-4. **Linear Computation**: Linear aggregation at the scoring layer. Non-linear decision thresholds may exist only in the evaluation layer.
-5. **No External Dependencies**: Pure Python implementation with no framework requirements, to ensure auditability, reproducibility, and long-term stability under refactor or environment changes.
-
-## Non-Goals
-
-This engine does not:
-- Predict judicial outcomes
-- Estimate probabilities of liability or quantum
-- Model opponent psychology or negotiation tactics
-- Replace legal advice or forensic analysis
-
-It exists solely to impose disciplined structure on settlement leverage assessment.
-
-## How to Run
-
-### Basic Execution (Human-Readable Output)
+#### Basic Execution
 
 ```bash
-cd procedural_leverage_engine
 python -m cli.run
 ```
-
-This will:
-1. Load the current case state from `engine/state.py`
-2. Compute UPLS and tripwire scores
-3. Generate a decision recommendation
-4. Print a formatted summary to stdout
 
 Example output:
 ```
@@ -134,347 +149,354 @@ DECISION:
 
 INTERPRETATION:
   Moderate procedural leverage - routine dispute parameters
-
 ============================================================
 ```
 
-### JSON Output (Machine-Readable)
+#### JSON Output
 
 ```bash
-cd procedural_leverage_engine
 python -m cli.run --json
-# or
-python -m cli.run -j
 ```
 
-This outputs a deterministic JSON schema for automation, pipelines, and integrations:
-
-```json
-{
-  "inputs": {
-    "SV1a": 0.38,
-    "SV1b": 0.86,
-    "SV1c": 0.75
-  },
-  "scores": {
-    "upls": 0.641,
-    "tripwire": 6.41
-  },
-  "evaluation": {
-    "decision": "HOLD",
-    "confidence": "Moderate",
-    "tripwire_triggered": false,
-    "upls_value": 0.641,
-    "tripwire_value": 6.41
-  },
-  "interpretation": {
-    "leverage_position": "Moderate procedural leverage - routine dispute parameters",
-    "decision_explanation": "Model indicates maintaining position is appropriate given current leverage posture.",
-    "tripwire_status": "Caution zone - monitor for procedural changes",
-    "confidence_explanation": "Model indicates moderate confidence in current leverage assessment."
-  },
-  "version": "1.0"
-}
-```
-
-### Command-Line Help
+#### Calibration Probe
 
 ```bash
-python -m cli.run --help
+python -m cli.run calibrate
 ```
 
-This displays usage information and available flags.
+Runs independent LLM calibration assessment.
 
-### Running Tests
+#### Daily AI Context
 
 ```bash
-cd procedural_leverage_engine
-python -m pytest tests/ -v
+python -m cli.run daily-ai \
+  --text "New email from opposing counsel..." \
+  --entry-type email \
+  --sv1a 0.6 --sv1b 0.7 --sv1c 0.5
 ```
 
-The test suite locks all core outputs (scoring, evaluation, interpretation, CLI). If tests fail, the economics or contracts have changed and require explicit review.
+---
 
-Test coverage:
-- `tests/test_scoring.py` - 7 tests (baseline outputs)
-- `tests/test_evaluation.py` - 26 tests (thresholds, confidence, tripwire)
-- `tests/test_interpretation.py` - 30 tests (language, contracts, formatting)
-- `tests/test_cli.py` - 11 tests (human/JSON modes, schema validation)
+## Dashboard
 
-Total: 74 tests
-
-## Grid Sweep
-
-Run a deterministic SV terrain sweep across a fixed 495-point grid:
+### Run the Dashboard
 
 ```bash
-cd procedural_leverage_engine
-python run_sv_grid_sweep.py
-```
-
-This generates:
-
-- `outputs/grid/grid_all.csv`
-- `outputs/grid/grid_sv1c_0.45.csv` ... `grid_sv1c_0.95.csv`
-- `outputs/grid/plots/heatmap_upls_sv1c_<value>.png`
-- `outputs/grid/plots/heatmap_decision_sv1c_<value>.png`
-
-The script also prints:
-
-- total grid points
-- decision counts per SV1c slice
-- min/max/mean UPLS per slice
-- detected 4-neighbour decision cliff transitions
-
-## Probabilistic Extensions
-
-The `/probabilistic` directory provides uncertainty quantification and scenario exploration on top of the deterministic core engine. It does not modify or replace the core engine—it consumes it via JSON output or the `run_engine()` function.
-
-**Critical Design Principle**: NEVER import from `/engine` directly. Always consume via CLI JSON output or `run_engine()` function.
-
-### What It Does
-
-The probabilistic layer provides:
-- **Uncertainty quantification** (Monte Carlo distributions)
-- **Scenario exploration** (stress testing, what-if analysis)
-- **Posterior updates** (Bayesian learning from outcomes, optional)
-
-These are **orthogonal concerns** to the deterministic engine. The deterministic engine provides leverage posture and decision recommendations. The probabilistic layer quantifies uncertainty around those estimates.
-
-### Architecture Boundary
-
-**Allowed**:
-- Consume CLI JSON output via `probabilistic/adapters.py`
-- Call `run_engine()` from CLI layer
-- Use Pydantic schemas to validate JSON contracts
-
-**Forbidden**:
-- Import from `/engine` directly
-- Modify deterministic math or thresholds
-- Mix probabilistic and deterministic logic in same file
-
-### Usage Examples
-
-**Monte Carlo Sampling** (quantify uncertainty):
-```python
-from probabilistic.monte_carlo import NormalDistribution, monte_carlo_sample
-from probabilistic.adapters import run_deterministic_engine
-
-# Define distributions for SV parameters
-sv1a_dist = NormalDistribution(mean=0.38, std=0.05)
-sv1b_dist = NormalDistribution(mean=0.86, std=0.03)
-sv1c_dist = NormalDistribution(mean=0.75, std=0.08)
-
-# Sample 10,000 scenarios
-result = monte_carlo_sample(
-    n_samples=10000,
-    sv1a_dist=sv1a_dist,
-    sv1b_dist=sv1b_dist,
-    sv1c_dist=sv1c_dist
-)
-
-# Access decision proportions
-print(result.decision_proportions)
-# {'ACCEPT': 0.23, 'COUNTER': 0.45, 'HOLD': 0.27, 'REJECT': 0.05}
-```
-
-**Stress Scenarios** (what-if analysis):
-```python
-from probabilistic.scenarios import run_scenario
-
-# Run predefined stress test
-result = run_scenario('cost_spike')
-print(result.scenario_name)  # 'cost_spike'
-print(result.output.evaluation.decision)  # 'HOLD'
-print(result.description)  # 'Maximum cost asymmetry - worst-case cost exposure'
-```
-
-**Custom Scenarios** (tailored what-ifs):
-```python
-from probabilistic.scenarios import run_custom_scenario
-
-result = run_custom_scenario(
-    scenario_name='aggressive_offer',
-    sv1a=0.7,
-    sv1b=0.9,
-    sv1c=0.4,
-    description='Opponent makes aggressive offer'
-)
-print(result.output.evaluation.decision)  # 'ACCEPT' (or appropriate decision)
-```
-
-### Non-Goals (Probabilistic Layer)
-
-The probabilistic extensions do not:
-- Replace the deterministic engine
-- Modify `/engine` in any way
-- Predict judicial outcomes (liability, quantum)
-- Model opponent psychology or negotiation tactics
-- Provide probability-of-success estimates
-
-They exist solely to:
-- Quantify uncertainty around deterministic leverage estimates
-- Explore scenario space systematically
-- Provide structured output for higher-order decision systems
-
-### Directory Structure
-
-```
-procedural_leverage_engine/
-├── README.md
-├── engine/
-│   ├── scoring.py          # UPLS math (immutable, version-locked)
-│   ├── state.py            # current case inputs
-│   ├── evaluation.py       # accept / counter / reject logic
-│   └── interpretation.py   # human-readable labels
-├── scenarios/
-│   ├── sweeps.py           # SV sweeps / what-ifs
-│   └── presets.py          # named scenarios
-├── cli/
-│   └── run.py              # command-line entry point
-├── probabilistic/            # v2.0-skeleton (structure only, not implemented)
-│   ├── README.md             # architecture doc (NEVER import /engine)
-│   ├── __init__.py           # validation helper
-│   ├── schemas.py            # Pydantic JSON models
-│   ├── adapters.py           # CLI wrapper
-│   ├── monte_carlo.py        # SV sampling (skeleton)
-│   ├── scenarios.py           # named presets
-│   └── tests/
-│       ├── __init__.py
-│       ├── test_monte_carlo.py  # distribution tests
-│       └── test_scenarios.py    # preset validation
-└── tests/
-    ├── test_scoring.py     # output locks
-    ├── test_evaluation.py  # evaluation tests
-    ├── test_interpretation.py  # interpretation tests
-    └── test_cli.py         # CLI tests
-```
-
-### Safety Guarantees
-
-- **Zero Core Pollution**: Probabilistic code never imports from `/engine`
-- **Rollback Safe**: Delete `/probabilistic` and core engine still works
-- **Test Independence**: Probabilistic tests don't run core tests
-- **Blame Clear**: Bugs are in probabilistic code, not deterministic
-
-## Important Notes
-
-- **`engine/scoring.py` is version-locked**: Changes here modify the economics and require test updates.
-- **State is explicit**: Current inputs are in `engine/state.py`, not in external files.
-- **No I/O in scoring**: The math functions are pure and deterministic.
-- **Tests are locks**: All test files prevent unintended changes to calculations and contracts.
-
-## Design Principles
-
-1. **Pure functions first** – no side effects
-2. **Math is immutable** – the scoring logic never mutates state
-3. **State is explicit** – no hidden globals
-4. **Readable > clever** – this is decision support, not a Kaggle entry
-5. **One responsibility per file**
-
-## Daily AI Assistant (Calibration)
-
-The Daily AI Assistant helps you maintain calibration of the leverage model by accumulating context over time and generating NotebookLM-ready prompts for systematic review.
-
-### What It Does
-
-- **Context Journal**: Append-only file-based storage (`daily_context.json`) of all case updates, emails, court notes, and timeline changes
-- **Prompt Generation**: Creates structured calibration prompts for NotebookLM that include:
-  - Full accumulated context (all prior entries)
-  - Current deterministic engine snapshot
-  - Explicit assumptions audit
-  - Calibration questionnaire (fact validation, drift detection, pressure level review, settlement corridor sanity check)
-  - Required JSON output schema
-
-### How to Use
-
-#### Dashboard (Recommended)
-
-Run the dashboard and scroll to the **Daily AI (Calibration)** panel:
-
-```bash
-cd procedural_leverage_engine
 streamlit run web/dashboard.py
 ```
 
-In the panel:
-1. Paste new context (emails, notes, updates) in the text area
-2. Select entry type (text/email/court_note/phone_call/other)
-3. Click **Save to Journal** to append with timestamp
-4. Click **Generate NotebookLM Prompt** to build the calibration prompt
-5. Copy the generated prompt and paste into NotebookLM
-6. Review the LLM's structured JSON output for drift detection and calibration recommendations
+### Dashboard Panels
 
-#### CLI (Headless)
+1. **Settlement Bands**: Visual band selector with flag-driven activation
+2. **Monetary Corridor**: Event-driven repricing with visual feedback
+3. **Daily AI (Calibration)**: Context journal and NotebookLM prompts
+4. **Forensic Deep Dive** (Advanced): Truth decay, GDPR forensics, shadow reserve
+5. **Export**: JSON, PDF, and calibration outputs
 
-Add context and generate prompt from command line:
+---
+
+## Settlement Bands Framework
+
+### Band Definitions
+
+| Band | Range | Flags Required | Description |
+|------|-------|----------------|-------------|
+| **BASE** | £2.5m–£4m | 0 | Present-day, evidence-only value |
+| **VALIDATION** | £5m–£9m | 1 validation flag | After external validation event |
+| **TAIL** | £12m–£15m | ≥2 tail flags | Existential containment pricing |
+
+### Validation Flags (1 required for VALIDATION band)
+- `judicial_comment_on_record`
+- `sra_investigation_open`
+- `insurer_expanded_reservation`
+- `court_directed_explanation`
+
+### Tail Flags (2 required for TAIL band)
+- `adverse_judicial_language`
+- `sra_formal_action`
+- `insurance_coverage_stress`
+- `part_26a_disclosure_conflict`
+- `criminal_investigation_escalation`
+
+### Usage
+
+```python
+from decision_support.settlement_bands import SettlementBandCalculator
+
+calc = SettlementBandCalculator(active_flags=["judicial_comment_on_record"])
+summary = calc.generate_band_summary()
+
+print(summary["current_band"])        # "VALIDATION"
+print(summary["current_range"])       # "£5.0m–£9.0m"
+print(summary["what_moves_up"])       # Next band requirements
+```
+
+---
+
+## Forensic Deep Dive Modules
+
+### 1. Truth Decay (probabilistic/bayesian.py)
+
+Time-based inference model for evidence strength assessment.
+
+```python
+from probabilistic.bayesian import quick_decay_check
+
+result = quick_decay_check(
+    days_since_event=240,
+    prior=0.6,
+    decay_rate=0.02
+)
+
+print(result["results"]["posterior_probability"])  # 0.289
+print(result["results"]["inference_strength"])     # "Low likelihood - improbable"
+```
+
+**Key Features**:
+- Exponential decay: P(t) = P(0) × exp(-λt)
+- Court-safe labels ("likelihood", not "proof")
+- Audit hash and explicit assumptions
+- Disclaimer: "time-based inference model, not proof of non-existence"
+
+### 2. GDPR Forensics (decision_support/gdpr_forensics.py)
+
+Data integrity risk assessment with court-safe language.
+
+```python
+from decision_support.gdpr_forensics import quick_integrity_check
+
+result = quick_integrity_check(
+    sar_gap_proven=True,
+    manual_override_proven=True
+)
+
+print(result["integrity_risk"]["risk_score"])      # 60
+print(result["integrity_risk"]["risk_level"])      # "HIGH"
+print(result["ico_reportable"])                    # True
+print(result["insurer_impact"]["iniquity_exclusion"])  # "Risk elevated"
+```
+
+**Risk Scoring**:
+- SAR gap proven: 25 points
+- Manual override proven: 35 points
+- Special category involved: 20 points
+- Shadow data discovered: 15 points
+- Systemic pattern: 15 points
+
+**Court-Safe Language**:
+- "Potential DPA 2018 s.173 exposure indicator" (not "fraud proven")
+- "ICO likely reportable" (not "must report")
+- "Iniquity exclusion risk elevated" (not "policy void")
+
+### 3. Insurance Shadow Reserve (decision_support/insurance_shadow.py)
+
+Illustrative reserve and dead money cost estimation.
+
+```python
+from decision_support.insurance_shadow import quick_shadow_check
+
+result = quick_shadow_check(
+    claim_value_gbp=5_000_000,
+    litigation_stage="procedural_irregularity_flagged"
+)
+
+print(result["shadow_reserve"]["estimated_reserve_locked_gbp"])  # 1,750,000
+print(result["dead_money_cost"]["annual_cost_gbp"])              # 105,000
+print(result["negotiation_lever"]["lever_strength"])             # "HIGH"
+```
+
+**Stage-Based Ratios**:
+- Notification: 5%
+- Defence filed: 15%
+- Procedural irregularity flagged: 35%
+- Trial listed: 65%
+
+**Disclaimer**: "Illustrative reserve ratios for negotiation analysis. Not actual insurer-specific reserves."
+
+---
+
+## Insurance Reserve Model
+
+Reserve pressure analysis for negotiation leverage.
+
+```python
+from decision_support.insurance_reserve import InsuranceReserveModel
+
+model = InsuranceReserveModel(case_reserve_gbp=2_000_000)
+report = model.generate_reserve_report(
+    settlement_demand_gbp=5_000_000,
+    active_flags=["sra_formal_action"]
+)
+
+print(report["gap_analysis"]["reserve_gap"])           # 2,250,000
+print(report["coverage_stress"]["stress_level"])       # "ELEVATED"
+print(report["negotiation_leverage"]["score"])         # 5.25
+```
+
+---
+
+## GDPR Liability Module
+
+Quantified GDPR exposure for Hiloka and Maven.
+
+```python
+from decision_support.gdpr_liability import HILOKA_GDPR_EXPOSURE
+
+report = HILOKA_GDPR_EXPOSURE.generate_total_exposure_report()
+
+print(report["article_82_exposure"]["total_exposure_high"])  # 375,000
+print(report["ico_fine_exposure"]["max_fine_calculated"])   # 200,000
+print(report["combined_maximum_exposure"])                  # 575,000
+```
+
+---
+
+## Daily AI Assistant
+
+### Context Journal
+
+Append-only file-based storage (`daily_context.json`):
+
+```python
+from ai_assistant.context_journal import add_context, get_all_context
+
+# Add entry
+add_context(
+    doc_text="New email from Freeths received...",
+    entry_type="email",
+    source="dashboard"
+)
+
+# Retrieve all context
+context = get_all_context(limit=50)
+```
+
+### Calibration Prompt Generation
+
+```python
+from ai_assistant.daily_calibration import DailyAICalibrator
+
+calibrator = DailyAICalibrator()
+prompt = calibrator.build_prompt(
+    all_context=context,
+    new_context="New judicial comment received...",
+    engine_snapshot=engine_output,
+    assumptions_snapshot=assumptions
+)
+```
+
+**Prompt Includes**:
+- Engine snapshot (UPLS, tripwire, decision)
+- Settlement band summary
+- Forensic deep dive outputs
+- Explicit assumptions
+- Calibration questionnaire
+- Required JSON output schema
+
+---
+
+## Testing
+
+### Run All Tests
 
 ```bash
-# Add context and generate prompt
-python -m cli.run daily-ai \
-  --text "New email from opposing counsel received..." \
-  --entry-type email \
-  --sv1a 0.6 --sv1b 0.7 --sv1c 0.5 \
-  --export-md --print-prompt
+python -m pytest tests/ -v
 ```
 
-Options:
-- `--text, -t`: New context text (required)
-- `--entry-type, -e`: Type of entry (text/email/court_note/phone_call/other)
-- `--sv1a/--sv1b/--sv1c`: Current SV values for engine snapshot
-- `--limit, -l`: Limit context entries (0 = all)
-- `--export-md, -m`: Also export prompt as Markdown file
-- `--print-prompt, -p`: Print generated prompt to stdout
+### Test Coverage
 
-### Output Structure
+| Module | Tests |
+|--------|-------|
+| Core engine | 74 |
+| Settlement bands | 33 |
+| Insurance reserve | 14 |
+| GDPR liability | 14 |
+| Bayesian decay | 12 |
+| GDPR forensics | 12 |
+| Insurance shadow | 10 |
+| AI assistant | 33 |
+| Daily calibration | 23 |
+| Calibration probe | 21 |
+| **TOTAL** | **233** |
 
-The calibration prompt generates JSON structured output including:
+### Critical Test Constraints
 
-```json
-{
-  "timestamp_utc": "2024-01-15T10:30:00",
-  "model_version": "LEVQUANT_CALIBRATION_TEMPLATE_v1.0",
-  "lexicon_used": true,
-  "engine_snapshot": { ... },
-  "assumptions_audit": {
-    "assumptions_light_or_heavy": "light|mixed|heavy",
-    "top_5_load_bearing_assumptions": [...]
-  },
-  "fact_checks": [
-    {"id": "F1", "claim": "...", "status": "INFERRED", "probability": 0.7, ...}
-  ],
-  "drift_detection": {
-    "drift_score": 0.3,
-    "where_drift_detected": [...],
-    "required_corrections": [...]
-  },
-  "tripwire_calibration": {
-    "pressure_level_expected": 7,
-    "pressure_level_actual": 6.5,
-    "explain_in_plain_english": "..."
-  },
-  "settlement_corridor_check": {
-    "anchor_gbp": 15000000,
-    "minimum_objective_gbp": 9000000,
-    "corridor_alignment": "aligned",
-    "why": "..."
-  },
-  "insurer_logic": {
-    "fastest_scare_fact": "...",
-    "reserve_rights_triggers": [...]
-  },
-  "daily_actions": {
-    "what_to_update_in_inputs": [...],
-    "what_to_leave_unchanged": [...],
-    "what_to_watch_next": [...]
-  }
-}
+```python
+# Settlement bands
+test_fifteen_million_only_in_tail      # £15m appears ONLY in TAIL
+test_base_does_not_exceed_four_million  # BASE capped at £4m
+test_validation_does_not_exceed_nine    # VALIDATION capped at £9m
+
+# Bayesian decay
+test_decay_increases_with_days          # Monotonic decay
+test_posterior_bounded                  # 1%-99% bounds
+
+# GDPR forensics
+test_score_changes_with_toggles         # UI visibly changes
 ```
 
-### Design Principles
+---
 
-- **No vector store**: Simple append-only JSON file, no embeddings or retrieval
-- **No external API calls by default**: Generates prompts for manual copy-paste into NotebookLM
-- **Court-safe language**: Prompt instructs LLM to use "alleged", "inferred", "supported by evidence" — never absolute claims
-- **Deterministic engine consumption**: Uses `cli.run.run_engine()` for engine snapshots, never imports from `/engine` directly
-- **Full context**: All journal entries included in prompt (no summarization) for complete audit trail
+## Court-Safe Language
 
+This system uses only court-safe, non-advocacy language:
+
+| Instead of... | Use... |
+|---------------|--------|
+| "Fraud proven" | "Potential exposure indicator" |
+| "Policy void" | "Iniquity exclusion risk elevated" |
+| "Guaranteed outcome" | "Likelihood assessment" |
+| "Beyond reasonable doubt" | "High probability inference" |
+| "Must report to ICO" | "Likely reportable to ICO" |
+| "Actual insurer reserve" | "Illustrative reserve ratio" |
+
+All outputs include explicit disclaimers and audit trails.
+
+---
+
+## Design Principles
+
+1. **Deterministic**: Same inputs → same outputs
+2. **Immutable Engine**: `/engine` never changes
+3. **No Direct Imports**: Decision support consumes engine via CLI
+4. **Court-Safe**: No absolute claims or advocacy language
+5. **Auditable**: All outputs include assumptions, timestamps, and hashes
+6. **Explicit Assumptions**: All models declare their assumptions
+7. **Test Coverage**: Comprehensive test suite prevents regressions
+
+---
+
+## Non-Goals
+
+This system does NOT:
+- Predict judicial outcomes
+- Provide legal advice
+- Replace forensic analysis
+- Model opponent psychology
+- Make decisions (it's decision **support**)
+
+---
+
+## License
+
+MIT License - See LICENSE file for details.
+
+---
+
+## Disclaimer
+
+**This is decision support software, not legal advice.**
+
+All monetary outputs are **decision-support assumptions**, not legal valuation facts. The system provides analytical frameworks for negotiation strategy—it does not guarantee outcomes or replace professional legal counsel.
+
+**Not Legal Advice**: This software is for informational and analytical purposes only. It does not constitute legal advice and should not be relied upon as a substitute for consultation with qualified legal counsel.
+
+**No Warranty**: The software is provided "as is" without warranty of any kind, express or implied.
+
+---
+
+## Support
+
+For issues, questions, or contributions:
+- GitHub Issues: https://github.com/ruskibeats/levquant/issues
+- Documentation: This README and ARCHITECTURE.md
