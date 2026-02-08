@@ -40,6 +40,7 @@ from web.components.assumptions_panel import render_assumptions_panel
 from web.components.contagion_map import render_contagion_panel
 from web.components.corridor_panel import render_corridor_panel
 from web.components.heatmap_panel import render_heatmap_panel
+from web.components.import_panel import render_import_panel
 from web.components.kpi_panel import render_kpi_panel
 from web.components.scenario_table import render_scenario_table
 from web.components.validation_panel import render_validation_panel
@@ -61,6 +62,28 @@ def _position_strength_text(upls: float) -> str:
 
 def _pressure_impact_text(tripwire: float) -> str:
     return "hurts them more than us" if tripwire >= 7.5 else "is still building and needs monitoring"
+
+
+def _render_import_section():
+    """Render the import panel section."""
+    st.subheader("📥 Import Run from JSON")
+    
+    with st.expander("What this panel does"):
+        st.markdown("""
+        **Purpose**: Load a previously saved run or RAG-generated JSON to populate the dashboard.
+        
+        **How to use**:
+        1. Upload a `full_run*.json` file from a previous session, OR
+        2. Paste JSON text directly from RAG output
+        3. Click "Import and Apply" to populate all dashboard controls
+        
+        **Validation**: The JSON must contain `inputs.procedural` with SV1a/SV1b/SV1c values.
+        """)
+    
+    # Use the import panel component
+    imported = render_import_panel()
+    
+    return imported
 
 
 def _render_daily_ai_panel(
@@ -238,6 +261,26 @@ def main() -> None:
     kill0 = default_kill_switch_inputs()
 
     st.sidebar.header("Input Control Panel")
+    
+    # Import JSON section in sidebar
+    st.sidebar.subheader("📥 Import Run")
+    import_json_text = st.sidebar.text_area(
+        "Paste JSON to import",
+        placeholder='{"inputs": {"procedural": {"SV1a": 0.5...}}}',
+        height=100,
+        help="Paste a full_run JSON to populate controls",
+    )
+    
+    if import_json_text.strip():
+        try:
+            import_data = json.loads(import_json_text)
+            # Store in session state for use below
+            st.session_state.imported_data = import_data
+            st.sidebar.success("JSON loaded — see main panel")
+        except json.JSONDecodeError as e:
+            st.sidebar.error(f"Invalid JSON: {e}")
+    
+    st.sidebar.markdown("---")
     
     # Settlement Objective Mode (NEW)
     st.sidebar.subheader("Settlement Objective Mode")
@@ -423,6 +466,13 @@ def main() -> None:
         containment=containment,
         stance=stance,
     )
+
+    # Import panel in main content area
+    st.markdown("---")
+    imported_inputs = _render_import_section()
+    
+    if imported_inputs:
+        st.info("Imported inputs available. Refresh the page to apply them to the sidebar controls.")
 
     st.subheader("What this means right now")
     
