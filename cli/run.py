@@ -24,6 +24,7 @@ sys.path.insert(0, str(project_root))
 
 from ai_assistant.context_journal import add_context, get_all_context
 from ai_assistant.daily_calibration import DailyAICalibrator, export_prompt_markdown, save_daily_report
+from ai_assistant.calibration_probe import run_calibration_probe
 from engine.state import get_current_state, load_state
 from engine.scoring import calculate_comprehensive_score
 from engine.evaluation import get_risk_assessment
@@ -74,6 +75,77 @@ def run_engine(state: Optional[Dict] = None) -> Dict:
         'interpretation': interpretation,
         'version': VERSION
     }
+
+
+def cmd_calibrate(args) -> int:
+    """Execute the calibrate command: run LLM Calibration Probe."""
+    from decision_support.monetary import ASSUMPTIONS
+    from ai_assistant.calibration_probe import get_probe_history
+    
+    # Show history if requested
+    if args.history:
+        history = get_probe_history(limit=10)
+        if not history:
+            print("No calibration probe history found.")
+            return 0
+        print("Calibration Probe History (last 10):")
+        print("-" * 60)
+        for entry in history:
+            print(f"  {entry.get('timestamp_utc', 'N/A')}")
+            print(f"    Status: {entry.get('status', 'N/A')}")
+            if 'fact_certainty_index' in entry:
+                print(f"    Fact Certainty: {entry['fact_certainty_index']:.2f}")
+                print(f"    Drift Alert: {entry.get('drift_alert', 'N/A')}")
+                print(f"    Settlement Range: {entry.get('recommended_settlement_range_gbp', 'N/A')}")
+            print()
+        return 0
+    
+    try:
+        # Get engine snapshot
+        engine_result = run_engine(state={
+            "SV1a": args.sv1a,
+            "SV1b": args.sv1b,
+            "SV1c": args.sv1c,
+        })
+        
+        # Build assumptions snapshot
+        assumptions_snapshot = {
+            **ASSUMPTIONS,
+            "current_posture": "NORMAL",
+            "fear_index": 0.0,
+            "kill_switches_active": [],
+        }
+        
+        # Run calibration probe (no LLM client = prompt only mode)
+        result = run_calibration_probe(
+            engine_snapshot=engine_result,
+            assumptions_snapshot=assumptions_snapshot,
+            llm_client=None,  # Prompt only for now
+        )
+        
+        # Print prompt if requested
+        if args.print_prompt:
+            print("=" * 60)
+            print("LLM CALIBRATION PROBE PROMPT")
+            print("=" * 60)
+            print(result["prompt"])
+            print("=" * 60)
+        
+        # Print summary
+        print(f"✓ Calibration probe generated")
+        print(f"  Timestamp: {result['timestamp_utc']}")
+        print(f"  Status: {result['status']}")
+        print(f"  Output saved to: outputs/calibration/")
+        
+        if not args.print_prompt:
+            print(f"\nTo see the prompt, run with --print-prompt")
+            print(f"To run with an LLM, provide an llm_client to run_calibration_probe()")
+        
+        return 0
+        
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 1
 
 
 def cmd_daily_ai(args) -> int:
@@ -197,6 +269,41 @@ Output Schema (JSON mode):
     # Subcommands
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
+    # calibrate subcommand (NEW)
+    calibrate_parser = subparsers.add_parser(
+        'calibrate',
+        help='Run LLM Calibration Probe for independent assessment',
+        description='Run an external LLM calibration probe to detect drift, overconfidence, and assumption inflation.'
+    )
+    calibrate_parser.add_argument(
+        '--sv1a',
+        type=float,
+        default=0.5,
+        help='SV1a value (Right to Bring the Claim) for engine snapshot (default: 0.5)'
+    )
+    calibrate_parser.add_argument(
+        '--sv1b',
+        type=float,
+        default=0.5,
+        help='SV1b value (Rule-Breaking Leverage) for engine snapshot (default: 0.5)'
+    )
+    calibrate_parser.add_argument(
+        '--sv1c',
+        type=float,
+        default=0.5,
+        help='SV1c value (Cost Pressure on Them) for engine snapshot (default: 0.5)'
+    )
+    calibrate_parser.add_argument(
+        '--print-prompt', '-p',
+        action='store_true',
+        help='Print calibration probe prompt to stdout (no LLM call)'
+    )
+    calibrate_parser.add_argument(
+        '--history',
+        action='store_true',
+        help='Show calibration probe history'
+    )
+    
     # daily-ai subcommand
     daily_ai_parser = subparsers.add_parser(
         'daily-ai',
@@ -254,6 +361,9 @@ Output Schema (JSON mode):
     # Route to appropriate command
     if args.command == 'daily-ai':
         return cmd_daily_ai(args)
+    
+    if args.command == 'calibrate':
+        return cmd_calibrate(args)
     
     # Default: run engine
     try:
