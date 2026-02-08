@@ -64,6 +64,11 @@ def _pressure_impact_text(tripwire: float) -> str:
     return "hurts them more than us" if tripwire >= 7.5 else "is still building and needs monitoring"
 
 
+def _get_session_value(key: str, default_value):
+    """Get value from session state or use default."""
+    return st.session_state.get(key, default_value)
+
+
 def _render_import_section():
     """Render the import panel section."""
     st.subheader("📥 Import Run from JSON")
@@ -83,7 +88,34 @@ def _render_import_section():
     # Use the import panel component
     imported = render_import_panel()
     
-    return imported
+    if imported:
+        # Store imported values in session state
+        st.session_state.imported_sv1a = imported["procedural"].SV1a
+        st.session_state.imported_sv1b = imported["procedural"].SV1b
+        st.session_state.imported_sv1c = imported["procedural"].SV1c
+        st.session_state.imported_principal = imported["monetary"].principal_debt_gbp
+        st.session_state.imported_claimant_costs = imported["monetary"].claimant_costs_gbp
+        st.session_state.imported_defendant_costs = imported["monetary"].defendant_costs_estimate_gbp
+        st.session_state.imported_regulatory = imported["monetary"].regulatory_exposure_gbp
+        st.session_state.imported_transaction = imported["monetary"].transaction_value_gbp
+        st.session_state.imported_nullity = imported["kill_switches"].nullity_confirmed
+        st.session_state.imported_regulatory_open = imported["kill_switches"].regulatory_open
+        st.session_state.imported_insurer = imported["kill_switches"].insurer_notice
+        st.session_state.imported_override = imported["kill_switches"].override_admitted
+        st.session_state.imported_shadow = imported["kill_switches"].shadow_director
+        st.session_state.imported_fear = imported["fear_override"]
+        st.session_state.imported_containment = imported["containment"].containment_exposure_gbp
+        st.session_state.imported_reputational = imported["containment"].reputational_damage_gbp
+        st.session_state.imported_fine = imported["containment"].regulatory_fine_risk_gbp
+        st.session_state.imported_cascade = imported["containment"].litigation_cascade_risk_gbp
+        st.session_state.imported_anchor = imported["stance"].anchor_gbp
+        st.session_state.imported_minimum = imported["stance"].minimum_objective_gbp
+        st.session_state.imported_mode = imported["stance"].objective_mode
+        st.session_state.imported_notes = imported["monetary"].assumptions_notes
+        st.success("✅ Import successful! Values applied to sidebar controls.")
+        st.info("The imported values are now active. Review and adjust as needed.")
+        return True
+    return False
 
 
 def _render_daily_ai_panel(
@@ -256,72 +288,64 @@ def main() -> None:
             """
         )
 
+    # Get defaults
     proc0 = default_procedural_inputs()
     money0 = default_monetary_inputs()
     kill0 = default_kill_switch_inputs()
 
+    # Import panel in main content area (at the top, before sidebar inputs)
+    st.markdown("---")
+    _render_import_section()
+    st.markdown("---")
+
     st.sidebar.header("Input Control Panel")
     
-    # Import JSON section in sidebar
-    st.sidebar.subheader("📥 Import Run")
-    import_json_text = st.sidebar.text_area(
-        "Paste JSON to import",
-        placeholder='{"inputs": {"procedural": {"SV1a": 0.5...}}}',
-        height=100,
-        help="Paste a full_run JSON to populate controls",
-    )
-    
-    if import_json_text.strip():
-        try:
-            import_data = json.loads(import_json_text)
-            # Store in session state for use below
-            st.session_state.imported_data = import_data
-            st.sidebar.success("JSON loaded — see main panel")
-        except json.JSONDecodeError as e:
-            st.sidebar.error(f"Invalid JSON: {e}")
-    
-    st.sidebar.markdown("---")
-    
-    # Settlement Objective Mode (NEW)
+    # Settlement Objective Mode
     st.sidebar.subheader("Settlement Objective Mode")
+    
+    # Use imported mode if available, otherwise default
+    default_mode = _get_session_value("imported_mode", "standard")
     objective_mode = st.sidebar.radio(
         "Select pricing mode:",
         options=["standard", "containment", "anchor_driven"],
+        index=["standard", "containment", "anchor_driven"].index(default_mode),
         format_func=lambda x: {
             "standard": "Standard dispute pricing",
             "containment": "Containment pricing (misconduct/regulatory risk)",
             "anchor_driven": "Anchor-driven negotiation (15m/9m guardrails)",
         }[x],
-        help="Changes how the GBP corridor is calculated. Standard = debt+costs+premiums. Containment = adds misconduct exposure. Anchor-driven = explicit negotiation stance.",
+        help="Changes how the GBP corridor is calculated.",
     )
     
-    # Negotiation Stance inputs (NEW)
+    # Negotiation Stance inputs
     if objective_mode in ("containment", "anchor_driven"):
         with st.sidebar.expander("Negotiation Stance (Anchor/Minimum)"):
             anchor_gbp = st.number_input(
                 "Opening demand / Anchor (£)",
                 min_value=0.0,
-                value=15_000_000.0,
+                value=_get_session_value("imported_anchor", 15_000_000.0),
                 step=1_000_000.0,
                 help="Your opening negotiation position. Default £15m.",
             )
             minimum_objective_gbp = st.number_input(
                 "Walk-away minimum (£)",
                 min_value=0.0,
-                value=9_000_000.0,
+                value=_get_session_value("imported_minimum", 9_000_000.0),
                 step=1_000_000.0,
                 help="Your minimum acceptable settlement. Default £9m.",
             )
     else:
-        anchor_gbp = 15_000_000.0
-        minimum_objective_gbp = 9_000_000.0
+        anchor_gbp = _get_session_value("imported_anchor", 15_000_000.0)
+        minimum_objective_gbp = _get_session_value("imported_minimum", 9_000_000.0)
     
     simple_mode = st.sidebar.checkbox("Plain English Mode", value=True)
+    
+    # Procedural inputs with imported values as defaults
     sv1a = st.sidebar.slider(
         "Right to Bring the Claim (SV1a)",
         0.0,
         1.0,
-        float(proc0.SV1a),
+        _get_session_value("imported_sv1a", float(proc0.SV1a)),
         0.01,
         help="Do you legally have the right/authority to make this claim?",
     )
@@ -329,102 +353,134 @@ def main() -> None:
         "Rule-Breaking Leverage (SV1b)",
         0.0,
         1.0,
-        float(proc0.SV1b),
+        _get_session_value("imported_sv1b", float(proc0.SV1b)),
         0.01,
-        help="How much pressure can be applied based on their rule-breaking or conduct issues?",
+        help="How much pressure can be applied based on their rule-breaking?",
     )
     sv1c = st.sidebar.slider(
         "Cost Pressure on Them (SV1c)",
         0.0,
         1.0,
-        float(proc0.SV1c),
+        _get_session_value("imported_sv1c", float(proc0.SV1c)),
         0.01,
-        help="Are your costs much lower than theirs, making delay and litigation expensive for them?",
+        help="Are your costs much lower than theirs?",
     )
 
     st.sidebar.subheader("Monetary Inputs")
-    principal = st.sidebar.number_input("Principal debt (£)", min_value=0.0, value=float(money0.principal_debt_gbp), step=10000.0)
-    claimant_costs = st.sidebar.number_input("Claimant costs (£)", min_value=0.0, value=float(money0.claimant_costs_gbp), step=10000.0)
-    defendant_costs = st.sidebar.number_input("Defendant costs estimate (£)", min_value=0.0, value=float(money0.defendant_costs_estimate_gbp), step=10000.0)
-    regulatory_exposure = st.sidebar.number_input("Regulatory exposure (£)", min_value=0.0, value=float(money0.regulatory_exposure_gbp), step=10000.0)
-    transaction_value = st.sidebar.number_input("Transaction value (£, optional)", min_value=0.0, value=float(money0.transaction_value_gbp), step=10000.0)
+    principal = st.sidebar.number_input(
+        "Principal debt (£)", 
+        min_value=0.0, 
+        value=_get_session_value("imported_principal", float(money0.principal_debt_gbp)), 
+        step=10000.0
+    )
+    claimant_costs = st.sidebar.number_input(
+        "Claimant costs (£)", 
+        min_value=0.0, 
+        value=_get_session_value("imported_claimant_costs", float(money0.claimant_costs_gbp)), 
+        step=10000.0
+    )
+    defendant_costs = st.sidebar.number_input(
+        "Defendant costs estimate (£)", 
+        min_value=0.0, 
+        value=_get_session_value("imported_defendant_costs", float(money0.defendant_costs_estimate_gbp)), 
+        step=10000.0
+    )
+    regulatory_exposure = st.sidebar.number_input(
+        "Regulatory exposure (£)", 
+        min_value=0.0, 
+        value=_get_session_value("imported_regulatory", float(money0.regulatory_exposure_gbp)), 
+        step=10000.0
+    )
+    transaction_value = st.sidebar.number_input(
+        "Transaction value (£, optional)", 
+        min_value=0.0, 
+        value=_get_session_value("imported_transaction", float(money0.transaction_value_gbp)), 
+        step=10000.0
+    )
     
-    # Containment Inputs (NEW) - only show in containment or anchor_driven modes
+    # Containment Inputs
     if objective_mode in ("containment", "anchor_driven"):
         st.sidebar.subheader("Containment Exposure (Misconduct Risk)")
         containment_exposure = st.sidebar.number_input(
             "Total containment exposure if public (£)",
             min_value=0.0,
-            value=0.0,
+            value=_get_session_value("imported_containment", 0.0),
             step=1_000_000.0,
-            help="Total cost if misconduct becomes public (reputational + regulatory + litigation)",
+            help="Total cost if misconduct becomes public",
         )
         reputational_damage = st.sidebar.number_input(
             "Reputational/fiduciary damage (£)",
             min_value=0.0,
-            value=0.0,
+            value=_get_session_value("imported_reputational", 0.0),
             step=500_000.0,
-            help="Estimated reputational harm to the business",
+            help="Estimated reputational harm",
         )
         regulatory_fine_risk = st.sidebar.number_input(
             "Regulatory fine risk (£)",
             min_value=0.0,
-            value=0.0,
+            value=_get_session_value("imported_fine", 0.0),
             step=500_000.0,
             help="SRA, FCA, or other regulatory fines",
         )
         litigation_cascade_risk = st.sidebar.number_input(
             "Follow-on litigation risk (£)",
             min_value=0.0,
-            value=0.0,
+            value=_get_session_value("imported_cascade", 0.0),
             step=500_000.0,
-            help="Risk of claims from other parties if misconduct confirmed",
+            help="Risk of claims from other parties",
         )
     else:
-        containment_exposure = 0.0
-        reputational_damage = 0.0
-        regulatory_fine_risk = 0.0
-        litigation_cascade_risk = 0.0
+        containment_exposure = _get_session_value("imported_containment", 0.0)
+        reputational_damage = _get_session_value("imported_reputational", 0.0)
+        regulatory_fine_risk = _get_session_value("imported_fine", 0.0)
+        litigation_cascade_risk = _get_session_value("imported_cascade", 0.0)
     
-    notes = st.sidebar.text_area("Notes on assumptions", value=money0.assumptions_notes)
+    notes = st.sidebar.text_area(
+        "Notes on assumptions", 
+        value=_get_session_value("imported_notes", money0.assumptions_notes)
+    )
 
     st.sidebar.subheader("Events That Change Everything")
     nullity = st.sidebar.checkbox(
         "Claim validity collapses (nullity confirmed)",
-        value=kill0.nullity_confirmed,
+        value=_get_session_value("imported_nullity", kill0.nullity_confirmed),
         help="Technical key: nullity_confirmed",
     )
     regulatory_open = st.sidebar.checkbox(
         "Regulatory investigation is open",
-        value=kill0.regulatory_open,
+        value=_get_session_value("imported_regulatory_open", kill0.regulatory_open),
         help="Technical key: regulatory_open",
     )
     insurer_notice = st.sidebar.checkbox(
         "Insurer has been notified",
-        value=kill0.insurer_notice,
+        value=_get_session_value("imported_insurer", kill0.insurer_notice),
         help="Technical key: insurer_notice",
     )
     override_admitted = st.sidebar.checkbox(
         "Administrative override admitted",
-        value=kill0.override_admitted,
+        value=_get_session_value("imported_override", kill0.override_admitted),
         help="Technical key: override_admitted",
     )
     shadow_director = st.sidebar.checkbox(
         "Shadow director evidence established",
-        value=kill0.shadow_director,
+        value=_get_session_value("imported_shadow", kill0.shadow_director),
         help="Technical key: shadow_director",
     )
 
     st.sidebar.subheader("Weakest-Link Stress Level Override")
-    use_fear_override = st.sidebar.checkbox("Enable stress override", value=False)
+    imported_fear = st.session_state.get("imported_fear")
+    use_fear_override = st.sidebar.checkbox(
+        "Enable stress override", 
+        value=imported_fear is not None
+    )
     fear_override = (
         st.sidebar.slider(
             "Weakest-Link Stress Level",
             0.0,
             1.0,
-            0.0,
+            imported_fear if imported_fear is not None else 0.0,
             0.01,
-            help="0.0 = no stress, 1.0 = extreme stress. Technical key: fear_override.",
+            help="0.0 = no stress, 1.0 = extreme stress",
         )
         if use_fear_override
         else None
@@ -467,16 +523,9 @@ def main() -> None:
         stance=stance,
     )
 
-    # Import panel in main content area
-    st.markdown("---")
-    imported_inputs = _render_import_section()
-    
-    if imported_inputs:
-        st.info("Imported inputs available. Refresh the page to apply them to the sidebar controls.")
-
     st.subheader("What this means right now")
     
-    # Event escalation feedback (NEW)
+    # Event escalation feedback
     active_events = priced.get("kill_switches_active", [])
     event_count = len(active_events)
     
@@ -484,10 +533,6 @@ def main() -> None:
         st.warning(
             f"⚡ **{event_count} Event{'s' if event_count > 1 else ''} That Changes Everything active** — "
             f"Range adjusted due to existential risk factors"
-        )
-        st.caption(
-            "One or more high-impact events are active. These events typically force early settlement "
-            "because they introduce uncontrollable regulatory, insurance, or personal liability risk."
         )
     
     # Dual Range Display
@@ -501,66 +546,28 @@ def main() -> None:
             st.metric("Negotiation Range (Stance)", f"£{dual.negotiation_minimum_gbp:,.0f} – £{dual.negotiation_anchor_gbp:,.0f}")
             st.caption(f"Anchor: £{dual.negotiation_anchor_gbp:,.0f} | Minimum: £{dual.negotiation_minimum_gbp:,.0f}")
         
-        # Alignment warning
         if dual.range_alignment == "below_objective":
             st.warning(f"⚠️ {dual.explanation}")
         elif dual.range_alignment == "aligned":
             st.success(f"✓ {dual.explanation}")
-        
-        # Pressure premium info with escalation note
-        if dual.pressure_premium_gbp > 0:
-            st.info(
-                f"📈 Pressure Premium: £{dual.pressure_premium_gbp:,.0f} "
-                f"(Pressure Level {dual.pressure_level:.1f}/10 × {dual.urgency_multiplier_applied:.1%} urgency multiplier)"
-            )
-        
-        # Show escalated pressure level if different from engine
-        engine_raw_tripwire = run_engine(state=proc.model_dump())["scores"]["tripwire"]
-        if dual.pressure_level > engine_raw_tripwire + 0.5:
-            st.info(
-                f"🔺 **Pressure escalated from {engine_raw_tripwire:.1f} to {dual.pressure_level:.1f}/10** "
-                f"due to active Events That Change Everything"
-            )
     
     st.success(
-        "\n".join(
-            [
-                f"• Our overall position is **{_position_strength_text(priced['engine'].upls)}**.",
-                f"• Pressure level is **{priced['engine'].tripwire:.1f}/10**, meaning delay now **{_pressure_impact_text(priced['engine'].tripwire)}**.",
-                f"• The system recommends **{priced['posture']}** behaviour.",
-            ]
-        )
+        f"• Our overall position is **{_position_strength_text(priced['engine'].upls)}**.\n"
+        f"• Pressure level is **{priced['engine'].tripwire:.1f}/10**.\n"
+        f"• The system recommends **{priced['posture']}** behaviour."
     )
 
-    if simple_mode:
-        caption_text = f"Recommended action now: **{priced['engine'].decision}** | Stance: **{priced['posture']}** | Mode: **{objective_mode.replace('_', ' ').title()}**"
-        if event_count > 0 and priced['posture'] in ['URGENT', 'FORCE']:
-            caption_text += f" | 🔺 **Escalated due to {event_count} active event{'s' if event_count > 1 else ''}**"
-        st.caption(caption_text)
-    
-    # "Why is my range low?" helper (NEW)
-    low_range_causes = detect_low_range_causes(money, containment, stance)
-    if low_range_causes:
-        with st.expander("🤔 Why is my Model Range lower than expected?"):
-            st.markdown("**Possible reasons your model range is below your negotiation objective:**")
-            for cause in low_range_causes:
-                st.markdown(f"- {cause}")
-            st.markdown("---")
-            st.markdown(
-                "**Remember:** Model Range is driven by quantified inputs. "
-                "Negotiation Range is your strategic stance. Both are valid—just different purposes."
-            )
-
+    # Rest of dashboard...
     render_kpi_panel(priced)
     render_corridor_panel(priced)
-
-    # Contagion Map Panel (NEW)
+    
     st.markdown("---")
     render_contagion_panel(kill.model_dump())
 
     st.subheader("How the settlement figure is built")
     breakdown_df = pd.DataFrame([b.model_dump() for b in priced["breakdown"]])
-    st.dataframe(breakdown_df, use_container_width=True)
+    st.dataframe(breakdown_df)
+    
     stack_fig = px.bar(
         breakdown_df,
         x="component",
@@ -568,7 +575,7 @@ def main() -> None:
         hover_data=["formula", "source", "assumption"],
         title="Settlement Building Blocks",
     )
-    st.plotly_chart(stack_fig, use_container_width=True)
+    st.plotly_chart(stack_fig)
 
     heatmap_df = build_heatmap_dataframe(money=money, kill=kill, fixed_sv1c=sv1c, fear_override=fear_override)
     render_heatmap_panel(heatmap_df)
@@ -577,16 +584,7 @@ def main() -> None:
     scenario_dicts = [s.model_dump() for s in scenario_rows]
     render_scenario_table(scenario_dicts)
 
-    if simple_mode:
-        with st.expander("Advanced details (for legal/insurer review)"):
-            if st.button("Run Safety Checks"):
-                validation_rows = [v.model_dump() for v in run_validation_battery(proc, money, kill, fear_override=fear_override)]
-                render_validation_panel(validation_rows)
-    else:
-        if st.button("Run Safety Checks"):
-            validation_rows = [v.model_dump() for v in run_validation_battery(proc, money, kill, fear_override=fear_override)]
-            render_validation_panel(validation_rows)
-
+    # Export
     report_payload = {
         "inputs": {
             "procedural": proc.model_dump(),
@@ -605,30 +603,13 @@ def main() -> None:
         "kill_switches_active": priced["kill_switches_active"],
     }
     audit_bundle = build_audit_bundle(report_payload)
-    if simple_mode:
-        with st.expander("What This Is Based On"):
-            render_assumptions_panel(ASSUMPTIONS, audit_bundle.model_dump(mode="json"))
-    else:
-        render_assumptions_panel(ASSUMPTIONS, audit_bundle.model_dump(mode="json"))
-
+    
     st.subheader("Export and Evidence")
     export_json = json.dumps({**report_payload, "audit": audit_bundle.model_dump(mode="json")}, indent=2)
     st.download_button("Download Evidence Pack (JSON)", data=export_json.encode("utf-8"), file_name="full_run.json", mime="application/json")
 
-    # Court-safe PDF with dual range disclosure
     pdf_bytes = build_pdf_summary(report_payload)
     st.download_button("Download Court-Ready Summary (PDF)", data=pdf_bytes, file_name="court_safe_summary.pdf", mime="application/pdf")
-    
-    # Add explicit disclosure note
-    st.caption(
-        "📋 **Court-Safe Disclosure:** The Model Range is a decision-support calculation based on quantified inputs. "
-        "The Negotiation Range reflects strategic positioning and requires separate justification. "
-        "This dashboard does not claim the model 'proves' any specific settlement value."
-    )
-
-    if st.button("Save Full Scenario Matrix to /outputs"):
-        json_path, csv_path = export_scenario_matrix(scenario_rows, out_dir=PROJECT_ROOT / "outputs")
-        st.success(f"Saved: {json_path} and {csv_path}")
 
     # Daily AI Panel
     st.markdown("---")
