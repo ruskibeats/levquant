@@ -25,12 +25,13 @@ class BandConfiguration:
 
 
 # Band definitions with flag activation requirements
+# Updated based on forensic valuation (HMCTS SAR, Sally email, Maven DSAR, Police Report)
 BAND_DEFINITIONS: dict[SettlementBand, BandConfiguration] = {
     "BASE": BandConfiguration(
         name="Base Settlement Range",
-        minimum_gbp=500_000,
-        typical_gbp=1_500_000,
-        description="Standard dispute resolution without aggravating factors",
+        minimum_gbp=66_000,
+        typical_gbp=500_000,
+        description="Debt recovery without aggravating factors",
         activation_flags=[],
         required_flag_count=0,
         unlock_message="Default position - no special flags required"
@@ -38,62 +39,202 @@ BAND_DEFINITIONS: dict[SettlementBand, BandConfiguration] = {
     "BAND_1": BandConfiguration(
         name="Elevated Risk Band",
         minimum_gbp=1_500_000,
-        typical_gbp=4_000_000,
-        description="Material procedural irregularities or regulatory exposure",
+        typical_gbp=3_000_000,
+        description="Material procedural irregularities - £3m now the discount floor",
         activation_flags=[
             "defence_nullity_confirmed",
-            "sra_investigation_open",
-            "insurer_notified_of_fraud"
+            "hmcts_sar_no_10june",
+            "metadata_12june_creation"
         ],
-        required_flag_count=1,
-        unlock_message="Activate with: Defence nullity, SRA investigation, or insurer notification"
+        required_flag_count=2,
+        unlock_message="Activate with: HMCTS SAR (no 10 June) + Metadata proving 12 June creation"
     ),
     "BAND_2": BandConfiguration(
         name="Serious Misconduct Band",
-        minimum_gbp=4_000_000,
-        typical_gbp=9_000_000,
-        description="Confirmed misconduct with containment exposure",
+        minimum_gbp=3_000_000,
+        typical_gbp=7_000_000,
+        description="Containment pricing - selling survival not debt",
         activation_flags=[
             "defence_nullity_confirmed",
-            "sra_investigation_open",
-            "insurer_notified_of_fraud",
-            "administrative_override_admitted",
-            "shadow_director_established"
+            "hmcts_sar_no_10june",
+            "metadata_12june_creation",
+            "sally_email_4june",
+            "maven_dsar_refusal",
+            "police_report_crn_418493325"
         ],
-        required_flag_count=3,
-        unlock_message="Activate with: 3+ serious flags including nullity, investigation, or override"
+        required_flag_count=4,
+        unlock_message="Activate with: 4+ evidence sources (Sally email, DSAR refusal, Police Report)"
     ),
     "BAND_3": BandConfiguration(
         name="Critical Exposure Band",
-        minimum_gbp=9_000_000,
-        typical_gbp=15_000_000,
-        description="Existential risk to firm - partner-level exposure",
+        minimum_gbp=5_000_000,
+        typical_gbp=9_000_000,
+        description="Existential risk - SRA/FCA/SDT exposure confirmed",
         activation_flags=[
             "defence_nullity_confirmed",
-            "sra_investigation_open",
-            "insurer_notified_of_fraud",
-            "administrative_override_admitted",
-            "shadow_director_established"
+            "hmcts_sar_no_10june",
+            "metadata_12june_creation",
+            "sally_email_4june",
+            "maven_dsar_refusal",
+            "police_report_crn_418493325",
+            "sra_principles_1_2_breach"
         ],
-        required_flag_count=4,
-        unlock_message="Activate with: 4+ flags including override or shadow director"
+        required_flag_count=6,
+        unlock_message="Activate with: 6+ flags including SRA breach or FCA SMCR exposure"
     ),
     "MAXIMUM": BandConfiguration(
         name="Maximum Containment Band",
-        minimum_gbp=15_000_000,
-        typical_gbp=25_000_000,
-        description="Total containment failure - public exposure imminent",
+        minimum_gbp=9_000_000,
+        typical_gbp=15_000_000,
+        description="Total containment failure - shadow director proven",
         activation_flags=[
             "defence_nullity_confirmed",
-            "sra_investigation_open",
-            "insurer_notified_of_fraud",
-            "administrative_override_admitted",
-            "shadow_director_established"
+            "hmcts_sar_no_10june",
+            "metadata_12june_creation",
+            "sally_email_4june",
+            "maven_dsar_refusal",
+            "police_report_crn_418493325",
+            "sra_principles_1_2_breach",
+            "shadow_director_sanjay_patel",
+            "part_26a_restructuring_risk"
         ],
-        required_flag_count=5,
-        unlock_message="Activate with: All 5 flags (catastrophic exposure)"
+        required_flag_count=8,
+        unlock_message="Activate with: 8+ flags including Shadow Director proven + Part 26A collapse risk"
     )
 }
+
+
+# Forensic evidence sources for calibration
+FORENSIC_EVIDENCE_SOURCES = {
+    "hmcts_sar_no_10june": {
+        "name": "HMCTS SAR Logs",
+        "source": "251104064 R Batchelor SAR data.pdf",
+        "proves": "Zero activity on 10 June - '10 June receipt' is administrative fiction",
+        "risk": "Defence nullity proven"
+    },
+    "metadata_12june_creation": {
+        "name": "Forensic Metadata Analysis",
+        "source": "Forensic Analysis",
+        "proves": "Defence created 12 June, not 10 June",
+        "risk": "Timeline fraud established"
+    },
+    "sally_email_4june": {
+        "name": "Freeths 'Sally' Email",
+        "source": "inside dealing copy.pdf",
+        "proves": "Seven solicitors knowingly advanced false timeline",
+        "risk": "SRA Principles 1 & 2 (Integrity/Rule of Law) - strike-off risk"
+    },
+    "maven_dsar_refusal": {
+        "name": "Maven DSAR Refusal",
+        "source": "RBatchelor 20260112 (1).pdf",
+        "proves": "Sanjay Patel shadow director orchestrating litigation",
+        "risk": "FCA/SMCR failure to act with integrity (COCON 2.1.1)"
+    },
+    "police_report_crn_418493325": {
+        "name": "Police Report",
+        "source": "FormSubmission...ir04.pdf",
+        "proves": "Suspect 1 (Greeff) forgery + liberty risk",
+        "risk": "Criminal charges + director disqualification"
+    },
+    "part_26a_restructuring_risk": {
+        "name": "Part 26A Restructuring",
+        "source": "Chancery Division pending",
+        "proves": "Flow UK lying to High Court about debt validity",
+        "risk": "Restructuring collapses if SAR logs filed"
+    }
+}
+
+
+class ForensicValuationEngine:
+    """Forensic valuation based on evidence bundle."""
+    
+    @staticmethod
+    def calculate_containment_value(
+        base_debt: float,
+        active_evidence: list[str],
+        regulatory_triggers: list[str]
+    ) -> dict:
+        """Calculate containment value based on forensic evidence.
+        
+        Args:
+            base_debt: Original debt amount (£66k)
+            active_evidence: List of active evidence sources
+            regulatory_triggers: List of SRA/FCA/Police triggers activated
+        
+        Returns:
+            Valuation dictionary
+        """
+        # Base is no longer the debt - it's the containment floor
+        containment_floor = 3_000_000  # £3m is now the floor, not ceiling
+        
+        # Multipliers based on regulatory exposure
+        multipliers = {
+            "sra_investigation": 1.5,      # SRA looking at firm
+            "fca_smcr_breach": 2.0,        # FCA regulated person involved
+            "police_criminal": 2.5,        # Criminal charges pending
+            "shadow_director_proven": 3.0,  # Sanjay Patel proven as controller
+            "part_26a_collapse": 2.0       # Restructuring at risk
+        }
+        
+        total_multiplier = 1.0
+        for trigger in regulatory_triggers:
+            if trigger in multipliers:
+                total_multiplier *= multipliers[trigger]
+        
+        # Cap multiplier at reasonable level
+        total_multiplier = min(total_multiplier, 5.0)
+        
+        valuation = containment_floor * total_multiplier
+        
+        return {
+            "base_debt": base_debt,
+            "containment_floor": containment_floor,
+            "regulatory_multiplier": total_multiplier,
+            "forensic_valuation": valuation,
+            "active_evidence": active_evidence,
+            "regulatory_triggers": regulatory_triggers,
+            "valuation_rationale": f"£3m containment floor × {total_multiplier:.1f} regulatory exposure"
+        }
+
+    @staticmethod
+    def get_strategic_recommendation(evidence_count: int) -> str:
+        """Get strategic recommendation based on evidence strength."""
+        if evidence_count >= 6:
+            return """
+STRATEGIC RECOMMENDATION (Maximum Leverage):
+
+1. SERVE DRAFT HIGH COURT EVIDENCE: Send draft Witness Statement for Part 26A 
+   hearing to Freeths. Exhibit HMCTS SAR Log (No 10 June entry) + Metadata.
+   State: "I am duty-bound to put this before the Chancery Judge."
+
+2. DATA CONTROLLER PINCER: Write to Chris Jagusz and Claire Speirs personally.
+   Tell them Freeths identified them as Respondents - they are personally liable.
+   Threaten court order to inspect "Shadow Servers."
+
+3. THE OFFER: "£3m was the price for the debt. The price for resolving the 
+   regulatory and criminal exposure is significantly higher. My settlement 
+   floor is now £6.5m+"
+
+RATIONAL SETTLEMENT RANGE: £5m - £9m
+"""
+        elif evidence_count >= 4:
+            return """
+STRATEGIC RECOMMENDATION (Strong Leverage):
+
+You hold nuclear material. Serve the evidence bundle to insurers and regulators.
+Settlement floor: £3m (containment) not £66k (debt).
+
+Target: £5m - £7m
+"""
+        else:
+            return """
+STRATEGIC RECOMMENDATION (Building Leverage):
+
+Continue evidence collection. Current position: Elevated Risk Band.
+Settlement floor: £1.5m
+
+Target: £2m - £3m
+"""
 
 
 class SettlementBandCalculator:

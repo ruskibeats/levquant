@@ -40,9 +40,9 @@ class TestBandDefinitions:
         assert BAND_DEFINITIONS["BASE"].required_flag_count == 0
         assert BAND_DEFINITIONS["BASE"].activation_flags == []
 
-    def test_maximum_band_requires_five_flags(self) -> None:
-        """MAXIMUM band requires 5 flags."""
-        assert BAND_DEFINITIONS["MAXIMUM"].required_flag_count == 5
+    def test_maximum_band_requires_eight_flags(self) -> None:
+        """MAXIMUM band requires 8 flags."""
+        assert BAND_DEFINITIONS["MAXIMUM"].required_flag_count == 8
 
 
 class TestSettlementBandCalculator:
@@ -101,7 +101,7 @@ class TestSettlementBandCalculator:
         needed = calc.flags_needed_for_next_band()
         
         assert needed["next_band"] == "BAND_2"
-        assert needed["flags_needed"] == 2  # Need 2 more flags to reach 3
+        assert needed["flags_needed"] == 3  # Need 3 more flags to reach 4
 
     def test_next_band_none_at_maximum(self) -> None:
         """At MAXIMUM, next band should be None."""
@@ -200,7 +200,7 @@ class TestWhatMovesUpExplanation:
         explanation = get_what_moves_up_explanation(calc)
         
         assert "Serious Misconduct Band" in explanation
-        assert "Required Flags: 3" in explanation
+        assert "Required Flags: 4" in explanation
 
     def test_explanation_shows_missing_flags(self) -> None:
         """Explanation shows missing flags."""
