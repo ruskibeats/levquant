@@ -239,7 +239,7 @@ def build_pricing(
     active_catalog = _map_ui_kill_switches(kill_switches)
     kill_switch_set = build_kill_switch_set(active_catalog)
     catalog_fear = compute_fear_index(kill_switch_set)
-    fear_index = max(catalog_fear, fear_override or 0.0)
+    fear_index = fear_override if fear_override is not None else catalog_fear
     fear_index = min(1.0, fear_index)
 
     containment = containment or ContainmentInputs()
@@ -250,7 +250,7 @@ def build_pricing(
     adjusted_pressure, adjusted_fear, posture, escalation_rules = apply_event_escalation(
         engine=engine,
         active_events=active_catalog,
-        fear_index=max(catalog_fear, fear_override or 0.0),
+        fear_index=fear_index,
         stress_override=fear_override,
     )
     
