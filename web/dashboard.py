@@ -21,6 +21,7 @@ from ai_assistant.daily_calibration import (
     export_prompt_markdown,
     save_daily_report,
 )
+from ai_assistant.prompt_loader import get_prompt_metadata
 from cli.run import run_engine
 from decision_support.monetary import ASSUMPTIONS, build_audit_bundle, build_pdf_summary, build_pricing, detect_low_range_causes
 from decision_support.schemas import ContainmentInputs, NegotiationStance
@@ -127,6 +128,18 @@ def _render_daily_ai_panel(
 ) -> None:
     """Render the Daily AI (Calibration) panel."""
     st.subheader("Daily AI (Calibration)")
+
+    # Show locked prompt badge
+    prompt_meta = get_prompt_metadata("v1")
+    st.info(
+        f"🔒 **Calibration Prompt**: `{prompt_meta['template_tag']}` (locked) | "
+        f"{prompt_meta['size_chars']:,} chars | "
+        f"{prompt_meta['line_count']} lines"
+    )
+    st.caption(
+        "This prompt is loaded verbatim from a source-of-truth file. "
+        "It cannot be edited to ensure methodology consistency and legal defensibility."
+    )
 
     with st.expander("What this panel does"):
         st.markdown("""

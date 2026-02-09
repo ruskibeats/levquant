@@ -1,15 +1,21 @@
 """Daily calibration driver for generating NotebookLM-ready prompts.
 
 No external API calls by default. Generates prompts for manual copy-paste into NotebookLM.
+Uses @style source-of-truth prompt injection — prompts are loaded verbatim from immutable files.
 """
 
 from __future__ import annotations
 
 import json
-import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Optional
+
+from ai_assistant.prompt_loader import (
+    get_prompt_metadata,
+    interpolate_prompt,
+    load_calibration_prompt,
+)
 
 
 DEFAULT_OUTPUTS_DIR = Path(__file__).parent.parent / "outputs"
@@ -20,29 +26,14 @@ class DailyAICalibrator:
 
     Generates NotebookLM-ready calibration prompts using accumulated context
     and current engine state. No external LLM calls by default.
+    
+    Uses @style prompt injection: the prompt is loaded verbatim from a source
+    file and interpolated with runtime context. The source file is immutable.
     """
 
     # Template version for tracking
     TEMPLATE_VERSION = "LEVQUANT_CALIBRATION_TEMPLATE_v1.0"
-
-    # Lexicon mapping: technical -> plain English
-    LEXICON = {
-        "UPLS": "Position Strength (0–1)",
-        "SV1a": "Right to Bring the Claim (0–1)",
-        "SV1b": "Rule-Breaking Leverage (0–1)",
-        "SV1c": "Cost Pressure on Them (0–1)",
-        "Tripwire": "Pressure Level (0–10)",
-        "Tripwire triggered": "Pressure Alert (Yes/No)",
-        "Decision": "Recommended Action",
-        "Confidence": "Certainty Score",
-        "Kill-switches": "Events That Change Everything",
-        "Fear index": "Weakest-Link Stress Level (0–1)",
-        "Settlement posture": "Stance (NORMAL/URGENT/FORCE)",
-        "Floor": "Minimum Offer (GBP)",
-        "Base": "Likely Offer (GBP)",
-        "Target": "Aim Offer (GBP)",
-        "Ceiling": "Maximum Offer (GBP)",
-    }
+    PROMPT_VERSION = "v1"
 
     def __init__(self, llm_client: Optional[Any] = None):
         """Initialize calibrator.
@@ -52,6 +43,8 @@ class DailyAICalibrator:
                        If None (default), build_prompt is used for manual copy-paste.
         """
         self.llm = llm_client
+        # Load the source-of-truth prompt
+        self._prompt_template = load_calibration_prompt(self.PROMPT_VERSION)
 
     def build_prompt(
         self,
@@ -62,6 +55,9 @@ class DailyAICalibrator:
     ) -> str:
         """Build a NotebookLM-ready calibration prompt.
 
+        Uses @style prompt injection: loads the prompt from an immutable source
+        file and interpolates runtime variables only.
+
         Args:
             all_context: Concatenated string of all prior journal entries.
             new_context: The new context added today.
@@ -71,226 +67,13 @@ class DailyAICalibrator:
         Returns:
             Full prompt string ready for NotebookLM.
         """
-        lexicon_block = self._build_lexicon_block()
-        snapshot_block = self._build_snapshot_block(engine_snapshot)
-        assumptions_block = self._build_assumptions_block(assumptions_snapshot)
-        questionnaire_block = self._build_questionnaire_block(engine_snapshot)
-        output_schema_block = self._build_output_schema_block()
-
-        prompt = f"""# LEVQUANT DAILY CALIBRATION PROMPT
-@{self.TEMPLATE_VERSION}
-
-## 1. ROLE / SYSTEM INSTRUCTION
-You are a calibration auditor for the LEVQUANT procedural leverage decision-support system.
-Your task is to audit the system's outputs against accumulated evidence and detect drift, fact-status changes, and calibration misalignments.
-
-Rules:
-- Use only the evidence provided in the context below.
-- Express all claims with bounded probabilities and confidence scores.
-- Reference specific evidence IDs (timestamps or entry indices) for every claim.
-- Use court-safe language: "alleged", "supported by evidence", "inferred" — never "proven" or absolute claims.
-- Output valid JSON only, matching the schema at the end of this prompt.
-
-{lexicon_block}
-
-## 3. CURRENT ENGINE SNAPSHOT (Deterministic Results)
-{snapshot_block}
-
-## 4. ASSUMPTIONS SNAPSHOT (Monetary Corridor Module)
-{assumptions_block}
-
-## 5. WHAT CHANGED TODAY (New Context)
-{new_context if new_context.strip() else "[No new context added today]"}
-
-## 6. FULL CONTEXT (All Previously Accumulated)
-{all_context if all_context.strip() else "[No prior context in journal]"}
-
-## 7. CALIBRATION QUESTIONNAIRE
-Answer all questions in the output JSON schema below.
-
-{questionnaire_block}
-
-## 8. OUTPUT SCHEMA (JSON ONLY)
-{output_schema_block}
-
----
-INSTRUCTION: Output valid JSON only. No markdown, no explanatory text outside the JSON structure.
-"""
-        return prompt
-
-    def _build_lexicon_block(self) -> str:
-        """Build the lexicon section mapping technical to plain English terms."""
-        lines = ["## 2. LEXICON (Use These Terms in Output)", ""]
-        for tech, plain in self.LEXICON.items():
-            lines.append(f"- {tech} -> \"{plain}\"")
-        lines.append("")
-        lines.append("All output fields should use the plain English terms in parentheses where applicable.")
-        return "\n".join(lines)
-
-    def _build_snapshot_block(self, engine_snapshot: dict) -> str:
-        """Format the engine snapshot for the prompt."""
-        inputs = engine_snapshot.get("inputs", {})
-        scores = engine_snapshot.get("scores", {})
-        evaluation = engine_snapshot.get("evaluation", {})
-
-        return f"""```json
-{{
-  "inputs": {json.dumps(inputs, indent=2)},
-  "scores": {json.dumps(scores, indent=2)},
-  "evaluation": {json.dumps(evaluation, indent=2)}
-}}
-```
-
-Plain English Summary:
-- Position Strength (UPLS): {scores.get('upls', 'N/A')}
-- Pressure Level (Tripwire): {scores.get('tripwire', 'N/A')}/10
-- Pressure Alert (Tripwire triggered): {'Yes' if evaluation.get('tripwire_triggered') else 'No'}
-- Recommended Action (Decision): {evaluation.get('decision', 'N/A')}
-- Certainty Score (Confidence): {evaluation.get('confidence', 'N/A')}"""
-
-    def _build_assumptions_block(self, assumptions: dict) -> str:
-        """Format assumptions snapshot."""
-        return f"""```json
-{json.dumps(assumptions, indent=2)}
-```
-
-Assumptions Audit Notes:
-- Review whether these assumptions are "light" (data-driven) or "heavy" (speculative).
-- Flag any assumptions that appear to carry disproportionate weight in the corridor calculation."""
-
-    def _build_questionnaire_block(self, engine_snapshot: dict) -> str:
-        """Build the calibration questionnaire."""
-        scores = engine_snapshot.get("scores", {})
-        tripwire = scores.get("tripwire", 0)
-
-        return f"""### A. Fact Status Validation (CRITICAL: Realised vs Prospective)
-
-**Classification Schema:**
-- **REALISED** — Already filed, evidenced, or judicially noticed. Not contingent on future events.
-- **EVIDENCED** — Supported by documentary/metadata evidence but may be contested.
-- **ALLEGED** — Claimed but not yet evidenced or tested.
-- **PROSPECTIVE** — Dependent on future outcomes (hearing, judicial comment, etc.).
-
-For each key fact:
-1. **Classification**: REALISED / EVIDENCED / ALLEGED / PROSPECTIVE
-2. **Status**: PROVEN / INFERRED / UNKNOWN / CONTESTED
-3. **Probability**: (0.0–1.0) — What is the likelihood this fact stands up?
-4. **Confidence**: (0.0–1.0) — How certain are you of this classification?
-5. **Evidence IDs**: Reference timestamps from context
-6. **Error check**: Is this fact misclassified as PROSPECTIVE when it is actually REALISED?
-
-**Common Error to Flag:**
-> "Defence validity pending judicial signal" when Defence deadline already expired and no relief sought.
-
-**Correction Rule:**
-If a fact is already filed/evidenced → classify as REALISED, not PROSPECTIVE.
-This shifts leverage from "anticipatory" to "realised."
-
-### B. Drift Detection
-1. Compare today's new context to prior context. What probabilities increased WITHOUT new evidence?
-2. Calculate a drift_score (0.0–1.0) where 1.0 = major unexplained shifts.
-3. List specific fields where drift is detected.
-4. **Specific check**: Are any REALISED facts still being treated as PROSPECTIVE in the assessment?
-5. List required corrections to realign the model.
-
-### C. Pressure Level Calibration (Tripwire Check)
-Current Pressure Level: {tripwire}/10
-
-1. Is this Pressure Level consistent with the facts and Stance?
-2. **Fact Status Impact**: If key facts are REALISED (not PROSPECTIVE), how does that change Pressure Level?
-3. If Pressure Level rises by +1 (e.g., new external validation), what changes in:
-   - Settlement corridor range?
-   - Stance (NORMAL/URGENT/FORCE)?
-   - Recommended Action?
-4. Explain in plain English why the current Pressure Level is justified or miscalibrated.
-
-### D. Settlement Corridor Sanity Check
-Anchor (user objective): £15,000,000
-Minimum Acceptable: £9,000,000
-
-1. Does the current corridor (Floor→Ceiling) align with the £9m minimum objective?
-2. **Realised Leverage Check**: Are you pricing REALISED facts as if they were PROSPECTIVE?
-   - Example: Defence nullity already filed → should price as realised, not pending
-3. If Aim/Maximum are far below £9m without justified assumption changes, flag "corridor misalignment".
-4. What single new fact would shift the corridor most significantly?
-5. Provide reasoning in plain English.
-
-### E. Insurer Behaviour Translation
-1. What single new fact causes fastest "reserve rights" behaviour?
-2. What triggers "exit or void" from the insurer?
-3. What conditions create "settlement urgency spike"?
-4. **Realised Risk Timing**: If key facts are already filed, why would insurers wait for April 8 rather than act now?
-
-### F. Breakpoint Stress Analysis
-1. Which actor breaks first under pressure? (bounded, evidence-referenced)
-2. Why? What is the weakest link in their position?
-3. What evidence supports this inference?
-4. **Timing Analysis**: What is the cost of delay if key facts are already REALISED?
-
-### G. Daily Actions
-1. What should be UPDATED in the model inputs? (specific SV changes, fact reclassifications)
-2. What should be LEFT UNCHANGED? (resist overfitting)
-3. **Fact Reclassification Priority**: Which PROSPECTIVE facts should be reclassified as REALISED?
-4. What should be WATCHED next? (monitoring priorities)"""
-
-    def _build_output_schema_block(self) -> str:
-        """Build the output JSON schema description."""
-        return """```json
-{
-  "timestamp_utc": "ISO8601 timestamp of this calibration",
-  "model_version": "LEVQUANT_CALIBRATION_TEMPLATE_v1.0",
-  "lexicon_used": true,
-  "engine_snapshot": {
-    "inputs": {"SV1a": 0.0, "SV1b": 0.0, "SV1c": 0.0},
-    "scores": {"upls": 0.0, "tripwire": 0.0},
-    "evaluation": {"decision": "HOLD|PUSH|FORCE", "confidence": "Low|Moderate|High", "tripwire_triggered": false}
-  },
-  "assumptions_audit": {
-    "assumptions_light_or_heavy": "light|mixed|heavy",
-    "top_5_load_bearing_assumptions": ["assumption_key_1", "..."],
-    "tripwire_dependency_check": {"pressure_level_sensitivity": "high|medium|low", "notes": "..."}
-  },
-  "fact_checks": [
-    {
-      "id": "F1",
-      "claim": "description of fact",
-      "status": "PROVEN|INFERRED|UNKNOWN",
-      "probability": 0.0,
-      "confidence": 0.0,
-      "evidence_ids": ["timestamp_or_index"],
-      "notes": "court-safe caveats"
-    }
-  ],
-  "drift_detection": {
-    "drift_score": 0.0,
-    "where_drift_detected": ["field_name"],
-    "required_corrections": ["action"]
-  },
-  "tripwire_calibration": {
-    "pressure_level_expected": 0,
-    "pressure_level_actual": 0,
-    "explain_in_plain_english": "..."
-  },
-  "settlement_corridor_check": {
-    "anchor_gbp": 15000000,
-    "minimum_objective_gbp": 9000000,
-    "corridor_alignment": "aligned|misaligned",
-    "why": "...",
-    "what_single_new_fact_shifts_corridor_most": "..."
-  },
-  "insurer_logic": {
-    "fastest_scare_fact": "...",
-    "reserve_rights_triggers": ["..."],
-    "exit_or_void_triggers": ["..."],
-    "settlement_urgency_spike_conditions": ["..."]
-  },
-  "daily_actions": {
-    "what_to_update_in_inputs": ["..."],
-    "what_to_leave_unchanged": ["..."],
-    "what_to_watch_next": ["..."]
-  }
-}
-```"""
+        return interpolate_prompt(
+            prompt_template=self._prompt_template,
+            engine_snapshot=engine_snapshot,
+            assumptions_snapshot=assumptions_snapshot,
+            new_context=new_context,
+            all_context=all_context,
+        )
 
     def run(
         self,
@@ -320,10 +103,15 @@ Minimum Acceptable: £9,000,000
             assumptions_snapshot=assumptions_snapshot,
         )
 
+        # Get prompt metadata for auditing
+        prompt_meta = get_prompt_metadata(self.PROMPT_VERSION)
+
         result = {
             "date": datetime.now(UTC).isoformat(),
             "new_context": new_context,
             "raw_prompt": prompt,
+            "prompt_metadata": prompt_meta,
+            "template_version": self.TEMPLATE_VERSION,
             "llm_response_json": None,
             "delta_summary": None,
         }
@@ -379,6 +167,47 @@ def parse_llm_output(output: str) -> dict:
         return json.loads(cleaned)
     except json.JSONDecodeError as e:
         raise ValueError(f"LLM output is not valid JSON: {e}\nOutput preview: {cleaned[:500]}")
+
+
+def validate_calibration_output(output: dict) -> tuple[bool, list[str]]:
+    """Validate calibration output against required schema.
+    
+    Args:
+        output: Parsed JSON output from LLM.
+        
+    Returns:
+        Tuple of (is_valid, list_of_errors).
+    """
+    errors = []
+    
+    # Check required top-level keys
+    required_keys = [
+        "timestamp_utc",
+        "model_version",
+        "engine_snapshot",
+        "fact_checks",
+        "drift_detection",
+        "tripwire_calibration",
+        "settlement_corridor_check",
+        "daily_actions",
+    ]
+    
+    for key in required_keys:
+        if key not in output:
+            errors.append(f"Missing required key: {key}")
+    
+    # Check model version matches
+    if output.get("model_version") != "LEVQUANT_CALIBRATION_TEMPLATE_v1.0":
+        errors.append(f"Unexpected model_version: {output.get('model_version')}")
+    
+    # Check for narrative content (simple heuristic)
+    output_str = json.dumps(output)
+    narrative_indicators = ["I think", "In my opinion", "I believe", "should", "recommend"]
+    for indicator in narrative_indicators:
+        if indicator in output_str:
+            errors.append(f"Possible narrative content detected: '{indicator}'")
+    
+    return len(errors) == 0, errors
 
 
 def save_daily_report(report: dict, outputs_dir: Optional[Path] = None) -> Path:
