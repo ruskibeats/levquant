@@ -142,13 +142,13 @@ def render_monte_carlo_panel(sv1a: float, sv1b: float, sv1c: float) -> None:
             fig_upls.update_layout(height=300)
             st.plotly_chart(fig_upls, use_container_width=True)
         
-        # Simple probability bar
+        # Simple probability bar - using CSS variables for theme consistency
         st.markdown(f"""
-        <div style="width: 100%; background-color: #333; height: 10px; border-radius: 5px; margin-top: 20px; position: relative;">
-            <div style="position: absolute; left: {upls['percentile_5']*100}%; width: {(upls['percentile_95'] - upls['percentile_5'])*100}%; background-color: #c5a059; height: 10px; border-radius: 5px; opacity: 0.5;"></div>
-            <div style="position: absolute; left: {upls['mean']*100}%; width: 4px; background-color: #fff; height: 16px; top: -3px; border-radius: 2px;" title="Mean"></div>
+        <div style="width: 100%; background-color: var(--secondary-bg, #1a1c24); height: 10px; border-radius: 5px; margin-top: 20px; position: relative;">
+            <div style="position: absolute; left: {upls['percentile_5']*100}%; width: {(upls['percentile_95'] - upls['percentile_5'])*100}%; background-color: var(--accent-gold, #c5a059); height: 10px; border-radius: 5px; opacity: 0.5;"></div>
+            <div style="position: absolute; left: {upls['mean']*100}%; width: 4px; background-color: var(--text-primary, #ffffff); height: 16px; top: -3px; border-radius: 2px;" title="Mean"></div>
         </div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #888; margin-top: 5px;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary, #a0a0a0); margin-top: 5px;">
             <span>0.0</span>
             <span>0.5</span>
             <span>1.0</span>
