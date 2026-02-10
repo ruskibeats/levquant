@@ -9,7 +9,7 @@ Critical Design Principle:
     They do not import from /engine.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List, Union
 from pydantic import BaseModel, Field, validator
 
 
@@ -78,20 +78,62 @@ class DeterministicOutput(BaseModel):
     
     class Config:
         """Pydantic configuration."""
-        
-        # Allow extra fields for future compatibility
+        extra = 'allow'
+
+
+class DistributionStats(BaseModel):
+    """Statistics for a distribution including raw samples."""
+    
+    mean: float
+    std: float
+    min: float
+    max: float
+    median: float
+    samples: List[float] = Field(default_factory=list, description="Raw samples for histogram")
+    
+    class Config:
+        extra = 'allow'
+
+
+class UPLSDistribution(BaseModel):
+    """UPLS distribution with percentiles and samples."""
+    
+    mean: float
+    std: float
+    min: float
+    max: float
+    median: float
+    percentile_5: float
+    percentile_95: float
+    samples: List[float] = Field(default_factory=list, description="Raw samples for histogram")
+    
+    class Config:
+        extra = 'allow'
+
+
+class TripwireDistribution(BaseModel):
+    """Tripwire distribution statistics with samples."""
+    
+    mean: float
+    std: float
+    min: float
+    max: float
+    median: float
+    samples: List[float] = Field(default_factory=list, description="Raw samples for histogram")
+    
+    class Config:
         extra = 'allow'
 
 
 class MonteCarloResult(BaseModel):
     """Result from Monte Carlo sampling (probabilistic layer)."""
     
-    meta: Dict[str, Any] = Field(..., description="Metadata (n_samples, method)")
+    meta: Dict[str, Any] = Field(..., description="Metadata (n_samples, method, seed, convergence, worst_cases)")
     distributions: Dict[str, Dict[str, float]] = Field(..., description="SV distribution parameters")
     decision_frequencies: Dict[str, int] = Field(..., description="Decision frequency counts")
     decision_proportions: Dict[str, float] = Field(..., description="Decision probability estimates")
-    tripwire_distribution: Dict[str, float] = Field(..., description="Tripwire distribution statistics")
-    upls_distribution: Dict[str, float] = Field(..., description="UPLS distribution statistics")
+    tripwire_distribution: Dict[str, Any] = Field(..., description="Tripwire distribution statistics (includes samples)")
+    upls_distribution: Dict[str, Any] = Field(..., description="UPLS distribution statistics (includes samples)")
     
     class Config:
         extra = 'allow'
